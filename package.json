@@ -6,7 +6,7 @@
     "name": "Thiago O Santos <tos.oliveira@gmail.com>"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=14"
   },
   "files": [
     "dist"
