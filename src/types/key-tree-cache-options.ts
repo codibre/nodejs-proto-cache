@@ -1,5 +1,8 @@
+import { Serializer } from './serializer';
+import { Tree } from './tree-type';
+
 export interface KeyTreeCacheOptions<T> {
 	keyLevelNodes: number;
-	serialize?(payload: T): string;
-	deserialize?(stringified: string): T;
+	serializer?: Serializer<T>;
+	valueTreeSerializer?: Serializer<Tree<string>>;
 }

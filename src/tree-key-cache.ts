@@ -3,6 +3,7 @@ import {
 	FullSetItem,
 	KeyTreeCacheOptions,
 	KeyTreeCacheStorage,
+	Serializer,
 	Step,
 	Tree,
 	TreeKeys,
@@ -15,9 +16,7 @@ import {
 import { buildKey } from './utils/graphs/build-key';
 import { TraversalItem } from './utils/graphs/tree-pre-order-traversal';
 import { checkFullSetItemChange } from './utils/graphs/check-full-set-item-change';
-
-const defaultDeserialize = JSON.parse.bind(JSON);
-const defaultSerialize = JSON.stringify.bind(JSON);
+import { getSerializers } from './utils/get-serializers';
 
 export class TreeKeyCache<T> {
 	constructor(
@@ -30,8 +29,7 @@ export class TreeKeyCache<T> {
 	 * @param path The path to be traversed
 	 */
 	async *iteratePath(path: string[]): AsyncIterable<Step<T>> {
-		const deserialize: (item: string) => T =
-			this.options.deserialize ?? defaultDeserialize;
+		const { deserialize } = getSerializers(this.options.serializer);
 		const { keyLevelNodes } = this.options;
 		const lastLevelKey = keyLevelNodes - 1;
 		const { length } = path;
@@ -88,11 +86,8 @@ export class TreeKeyCache<T> {
 		createValue: () => T,
 		previousKeys: string[] = [],
 	): AsyncIterable<Step<T>> {
-		const { keyLevelNodes } = this.options;
-		const deserialize: (stringified: string) => T =
-			this.options.deserialize ?? defaultDeserialize;
-		const serialize: (stringified: T) => string =
-			this.options.serialize ?? defaultSerialize;
+		const { keyLevelNodes, serializer } = this.options;
+		const { serialize, deserialize } = getSerializers(serializer);
 		const { length } = path;
 		let upTo = Math.min(keyLevelNodes - 1, length);
 		let currentLevel = previousKeys.length;
@@ -192,10 +187,10 @@ export class TreeKeyCache<T> {
 	): AsyncIterable<FullSetItem<T>> {
 		const iterable = treePreOrderBreadthFirstSearch(tree);
 		const { keyLevelNodes } = this.options;
-		const deserialize: (stringified: string) => T =
-			this.options.deserialize ?? defaultDeserialize;
-		const serialize: (stringified: T) => string =
-			this.options.serialize ?? defaultSerialize;
+		const { serialize, deserialize } = getSerializers(this.options.serializer);
+		const valueTreeSerializer = getSerializers(
+			this.options.valueTreeSerializer,
+		);
 		let currentSerialized: string | undefined;
 		for (const breadthNode of iterable) {
 			const { level } = breadthNode;
@@ -210,6 +205,7 @@ export class TreeKeyCache<T> {
 					chainedKey,
 					serialize,
 					deserialize,
+					valueTreeSerializer,
 					createValue,
 				);
 				continue;
@@ -243,12 +239,13 @@ export class TreeKeyCache<T> {
 		chainedKey: string,
 		serialize: (payload: T) => string,
 		deserialize: (stringified: string) => T,
+		valueTreeSerializer: Serializer<Tree<string>>,
 		createValue: () => T,
 	): AsyncIterable<FullSetItem<T>> {
 		const { treeRef } = breadthNode;
 		const serializedTree = await this.storage.get(chainedKey);
-		const rootTree: Tree<string> = serializedTree
-			? JSON.parse(serializedTree)
+		const rootTree = serializedTree
+			? valueTreeSerializer.deserialize(serializedTree)
 			: {};
 		let currentTree: Tree<string> | undefined = rootTree;
 		const stack = [];
@@ -284,7 +281,10 @@ export class TreeKeyCache<T> {
 		}
 
 		if (changed) {
-			await this.storage.set(chainedKey, JSON.stringify(rootTree));
+			await this.storage.set(
+				chainedKey,
+				valueTreeSerializer.serialize(rootTree),
+			);
 		}
 	}
 }
