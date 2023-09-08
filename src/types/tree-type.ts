@@ -13,3 +13,10 @@ export interface Step<T> {
 	key: string;
 	level: number;
 }
+
+export interface FullSetItem<T> {
+	value: T | undefined;
+	oldValue: T | undefined;
+	key: string;
+	level: number;
+}

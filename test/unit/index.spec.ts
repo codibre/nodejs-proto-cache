@@ -249,4 +249,156 @@ describe(TreeKeyCache.name, () => {
 			);
 		});
 	});
+
+	describe(proto.fullTreeSet.name, () => {
+		it('should update each tree node on storage', async () => {
+			const tree: Tree<{ value: number }> = {
+				c: {
+					a: {
+						v: { value: 11 },
+						c: {
+							b: {
+								c: {
+									c: {
+										v: { value: 30 },
+										c: {
+											d: {
+												c: {
+													e: {
+														v: { value: 50 },
+														c: {
+															f: {
+																v: { value: 61 },
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			};
+			const iterable = target.fullTreeSet(tree, () => ({
+				value: 0,
+			}));
+			let first = true;
+
+			for await (const item of iterable) {
+				if (!item.value?.value) {
+					if (first) first = false;
+					else if (item.value) {
+						item.value.value = 99;
+					}
+				}
+			}
+
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							v: '{"value":40}',
+							c: {
+								e: {
+									v: '{"value":50}',
+									c: {
+										f: { v: '{"value":61}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":11}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should update each tree node on storage and add any non existing node', async () => {
+			const tree: Tree<{ value: number }> = {
+				c: {
+					a: {
+						v: { value: 11 },
+						c: {
+							b1: {
+								c: {
+									c1: {
+										v: { value: 30 },
+										c: {
+											d1: {
+												c: {
+													e1: {
+														v: { value: 50 },
+														c: {
+															f1: {
+																v: { value: 61 },
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			};
+			const iterable = target.fullTreeSet(tree, () => ({
+				value: 0,
+			}));
+			let first = true;
+
+			for await (const item of iterable) {
+				if (!item.value?.value) {
+					if (first) first = false;
+					else if (item.value) {
+						item.value.value = 99;
+					}
+				}
+			}
+
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							v: '{"value":40}',
+							c: {
+								e: {
+									v: '{"value":50}',
+									c: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":11}'],
+					[
+						'a:b1:c1:d1',
+						JSON.stringify({
+							c: {
+								e1: { v: '{"value":50}', c: { f1: { v: '{"value":61}' } } },
+							},
+						}),
+					],
+					['a:b1:c1', '{"value":30}'],
+					['a:b1', '{"value":0}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+	});
 });
