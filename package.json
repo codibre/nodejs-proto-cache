@@ -1,8 +1,7 @@
 {
-  "name": "boilerplate-base",
+  "name": "tree-key-cache",
   "description": "This project is just a template for creation of new projects",
   "version": "0.0.0",
-  "private": true,
   "author": {
     "name": "Thiago O Santos <tos.oliveira@gmail.com>"
   },
@@ -17,7 +16,7 @@
     "doc": "rm -rf docs && npx typedoc && git add . && git commit -m \"chore: generating docs [skip ci]\"",
     "lint": "npm run lint:format && npm run lint:style",
     "lint:fix": "npm run lint:format:fix && npm run lint:style:fix",
-    "build": "tsc -p tsconfig.build.json",
+    "build": "nest build",
     "test": "jest test/unit",
     "test:watch": "jest test/unit --watch",
     "test:coverage": "jest test/unit --coverage",
@@ -62,11 +61,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/codibre/boilerplate-base.git"
+    "url": "https://github.com/codibre/nodejs-tree-key-cache.git"
   },
-  "homepage": "https://github.com/codibre/boilerplate-base#readme",
+  "homepage": "https://github.com/codibre/nodejs-tree-key-cache#readme",
   "bugs": {
-    "url": "https://github.com/codibre/boilerplate-base/issues"
+    "url": "https://github.com/codibre/nodejs-tree-key-cache/issues"
   },
   "keywords": [],
   "license": "MIT",
