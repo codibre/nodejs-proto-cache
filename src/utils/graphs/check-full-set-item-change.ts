@@ -1,4 +1,4 @@
-import { FullSetItem, Tree } from 'src/types';
+import { FullSetItem, Tree, TreeKeys } from '../../types';
 
 export function checkFullSetItemChange<T>(
 	item: { node: FullSetItem<T>; currentSerialized: string | undefined },
@@ -10,7 +10,7 @@ export function checkFullSetItemChange<T>(
 	if (node.value !== undefined) {
 		const serialized = serialize(node.value);
 		if (serialized !== currentSerialized) {
-			currentTree.v = serialized;
+			currentTree[TreeKeys.value] = serialized;
 			changed = true;
 		}
 	}

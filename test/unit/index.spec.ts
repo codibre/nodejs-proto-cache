@@ -1,4 +1,4 @@
-import { Step, Tree, TreeKeyCache } from './../../src';
+import { Step, Tree, TreeKeyCache, TreeKeys } from './../../src';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -13,11 +13,11 @@ describe(TreeKeyCache.name, () => {
 			[
 				'a:b:c:d',
 				JSON.stringify({
-					v: '{"value":40}',
-					c: {
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
 						e: {
 							v: '{"value":50}',
-							c: {
+							[TreeKeys.children]: {
 								f: { v: '{"value":60}' },
 							},
 						},
@@ -141,11 +141,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
@@ -183,11 +183,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
@@ -225,17 +225,17 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
 								f: {
 									v: '{"value":0}',
-									c: {
+									[TreeKeys.children]: {
 										j: { v: '{"value":99}' },
 									},
 								},
@@ -253,20 +253,20 @@ describe(TreeKeyCache.name, () => {
 	describe(proto.fullTreeSet.name, () => {
 		it('should update each tree node on storage', async () => {
 			const tree: Tree<{ value: number }> = {
-				c: {
+				[TreeKeys.children]: {
 					a: {
 						v: { value: 11 },
-						c: {
+						[TreeKeys.children]: {
 							b: {
-								c: {
+								[TreeKeys.children]: {
 									c: {
 										v: { value: 30 },
-										c: {
+										[TreeKeys.children]: {
 											d: {
-												c: {
+												[TreeKeys.children]: {
 													e: {
 														v: { value: 50 },
-														c: {
+														[TreeKeys.children]: {
 															f: {
 																v: { value: 61 },
 															},
@@ -303,11 +303,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":61}' },
 									},
 								},
@@ -323,20 +323,20 @@ describe(TreeKeyCache.name, () => {
 
 		it('should update each tree node on storage and add any non existing node', async () => {
 			const tree: Tree<{ value: number }> = {
-				c: {
+				[TreeKeys.children]: {
 					a: {
 						v: { value: 11 },
-						c: {
+						[TreeKeys.children]: {
 							b1: {
-								c: {
+								[TreeKeys.children]: {
 									c1: {
 										v: { value: 30 },
-										c: {
+										[TreeKeys.children]: {
 											d1: {
-												c: {
+												[TreeKeys.children]: {
 													e1: {
 														v: { value: 50 },
-														c: {
+														[TreeKeys.children]: {
 															f1: {
 																v: { value: 61 },
 															},
@@ -373,11 +373,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},

@@ -5,6 +5,7 @@ import {
 	KeyTreeCacheStorage,
 	Step,
 	Tree,
+	TreeKeys,
 } from './types';
 import { getKey, getStep, getFullSetItem } from './utils';
 import {
@@ -61,17 +62,17 @@ export class TreeKeyCache<T> {
 			upTo = length - 1;
 			while (level < upTo) {
 				if (!tree) break;
-				const { v } = tree;
+				const { [TreeKeys.value]: v } = tree;
 				level++;
 				if (v) {
 					yield getStep(deserialize, v, key, level);
 				}
 				key = getKey(path, level);
-				tree = tree.c?.[key];
+				tree = tree[TreeKeys.children]?.[key];
 			}
-			if (tree?.v) {
+			if (tree?.[TreeKeys.value]) {
 				level++;
-				yield getStep(deserialize, tree.v, key, level);
+				yield getStep(deserialize, tree[TreeKeys.value], key, level);
 			}
 		}
 	}
@@ -136,7 +137,7 @@ export class TreeKeyCache<T> {
 			let changed = false;
 			upTo = length - 1;
 			while (currentLevel < upTo) {
-				const currentSerialized = currentTree.v;
+				const currentSerialized = currentTree[TreeKeys.value];
 				currentLevel++;
 				const step = getStep(
 					deserialize,
@@ -149,18 +150,18 @@ export class TreeKeyCache<T> {
 				const serialized = serialize(step.value);
 				if (currentSerialized !== serialized) {
 					changed = true;
-					currentTree.v = serialized;
+					currentTree[TreeKeys.value] = serialized;
 				}
 				key = getKey(path, currentLevel);
-				currentTree.c ??= {};
-				let nextTree = currentTree.c[key];
+				currentTree[TreeKeys.children] ??= {};
+				let nextTree = currentTree[TreeKeys.children][key];
 				if (!nextTree) {
-					nextTree = currentTree.c[key] = {};
+					nextTree = currentTree[TreeKeys.children][key] = {};
 					changed = true;
 				}
 				currentTree = nextTree;
 			}
-			const currentSerialized = currentTree.v;
+			const currentSerialized = currentTree[TreeKeys.value];
 			const step = getStep(
 				deserialize,
 				currentSerialized,
@@ -172,7 +173,7 @@ export class TreeKeyCache<T> {
 			const serialized = serialize(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
-				currentTree.v = serialized;
+				currentTree[TreeKeys.value] = serialized;
 			}
 			if (changed) {
 				await this.storage.set(chainedKey, JSON.stringify(rootTree));
@@ -261,11 +262,12 @@ export class TreeKeyCache<T> {
 				if (!currentTree) {
 					throw new Error('Algorithm error');
 				}
-				currentTree.c ??= {};
-				let next: Tree<string> | undefined = currentTree.c[key];
+				currentTree[TreeKeys.children] ??= {};
+				let next: Tree<string> | undefined =
+					currentTree[TreeKeys.children][key];
 				if (next === undefined || next === null) {
 					changed = true;
-					next = currentTree.c[key] = {
+					next = currentTree[TreeKeys.children][key] = {
 						v: serialize(createValue()),
 					};
 				}

@@ -1,4 +1,4 @@
-import { Tree } from 'src/types';
+import { Tree, TreeKeys } from '../../types';
 
 export interface SimpleList<T> {
 	push(item: T): unknown;
@@ -36,7 +36,7 @@ export function* treePreOrderTraversal<T>(
 			throw new TypeError('Something went wrong processing list structure');
 		}
 		const [treeRef, level, key, parentRef] = item;
-		const { c: children, v: value } = treeRef;
+		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
 		let node: TraversalItem<T> | undefined;
 		if (key) {
 			node = {

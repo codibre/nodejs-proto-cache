@@ -1,4 +1,4 @@
-import { Tree } from 'src/types';
+import { Tree, TreeKeys } from '../../types';
 
 /**
  * Follow specified path in the tree, creating each non existing node on the way
@@ -14,20 +14,20 @@ export function* deepTreeSet<T>(
 ): Iterable<T> {
 	let current: Tree<T> = tree;
 	for (let level = 0; level < path.length; level++) {
-		if (current.v) {
-			yield current.v;
+		if (current[TreeKeys.value]) {
+			yield current[TreeKeys.value];
 		}
 		const key = path[level] ?? level;
-		if (!current.c) current.c = {};
-		let next: Tree<T> | undefined = current.c?.[key];
+		if (!current[TreeKeys.children]) current[TreeKeys.children] = {};
+		let next: Tree<T> | undefined = current[TreeKeys.children]?.[key];
 		if (next === undefined) {
 			next = {};
-			next.v = createLeaf();
-			current.c[key] = next;
+			next[TreeKeys.value] = createLeaf();
+			current[TreeKeys.children][key] = next;
 		}
 		current = next;
 	}
-	if (current.v) {
-		yield current.v;
+	if (current[TreeKeys.value]) {
+		yield current[TreeKeys.value];
 	}
 }
