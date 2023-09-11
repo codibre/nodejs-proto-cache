@@ -1,4 +1,4 @@
-import { Step, Tree, TreeKeyCache } from './../../src';
+import { Step, Tree, TreeKeyCache, TreeKeys } from './../../src';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -13,11 +13,11 @@ describe(TreeKeyCache.name, () => {
 			[
 				'a:b:c:d',
 				JSON.stringify({
-					v: '{"value":40}',
-					c: {
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
 						e: {
 							v: '{"value":50}',
-							c: {
+							[TreeKeys.children]: {
 								f: { v: '{"value":60}' },
 							},
 						},
@@ -141,11 +141,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
@@ -183,11 +183,11 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
@@ -225,17 +225,17 @@ describe(TreeKeyCache.name, () => {
 					[
 						'a:b:c:d',
 						JSON.stringify({
-							v: '{"value":40}',
-							c: {
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
 								e: {
 									v: '{"value":50}',
-									c: {
+									[TreeKeys.children]: {
 										f: { v: '{"value":60}' },
 									},
 								},
 								f: {
 									v: '{"value":0}',
-									c: {
+									[TreeKeys.children]: {
 										j: { v: '{"value":99}' },
 									},
 								},
@@ -245,6 +245,158 @@ describe(TreeKeyCache.name, () => {
 					['a:b:c', '{"value":30}'],
 					['a:b', '{"value":20}'],
 					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+	});
+
+	describe(proto.fullTreeSet.name, () => {
+		it('should update each tree node on storage', async () => {
+			const tree: Tree<{ value: number }> = {
+				[TreeKeys.children]: {
+					a: {
+						v: { value: 11 },
+						[TreeKeys.children]: {
+							b: {
+								[TreeKeys.children]: {
+									c: {
+										v: { value: 30 },
+										[TreeKeys.children]: {
+											d: {
+												[TreeKeys.children]: {
+													e: {
+														v: { value: 50 },
+														[TreeKeys.children]: {
+															f: {
+																v: { value: 61 },
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			};
+			const iterable = target.fullTreeSet(tree, () => ({
+				value: 0,
+			}));
+			let first = true;
+
+			for await (const item of iterable) {
+				if (!item.value?.value) {
+					if (first) first = false;
+					else if (item.value) {
+						item.value.value = 99;
+					}
+				}
+			}
+
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":61}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":11}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should update each tree node on storage and add any non existing node', async () => {
+			const tree: Tree<{ value: number }> = {
+				[TreeKeys.children]: {
+					a: {
+						v: { value: 11 },
+						[TreeKeys.children]: {
+							b1: {
+								[TreeKeys.children]: {
+									c1: {
+										v: { value: 30 },
+										[TreeKeys.children]: {
+											d1: {
+												[TreeKeys.children]: {
+													e1: {
+														v: { value: 50 },
+														[TreeKeys.children]: {
+															f1: {
+																v: { value: 61 },
+															},
+														},
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			};
+			const iterable = target.fullTreeSet(tree, () => ({
+				value: 0,
+			}));
+			let first = true;
+
+			for await (const item of iterable) {
+				if (!item.value?.value) {
+					if (first) first = false;
+					else if (item.value) {
+						item.value.value = 99;
+					}
+				}
+			}
+
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":11}'],
+					[
+						'a:b1:c1:d1',
+						JSON.stringify({
+							c: {
+								e1: { v: '{"value":50}', c: { f1: { v: '{"value":61}' } } },
+							},
+						}),
+					],
+					['a:b1:c1', '{"value":30}'],
+					['a:b1', '{"value":0}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
 		});
