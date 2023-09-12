@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.3.0...v0.3.1) (2023-09-12)
+
+
+### Bug Fixes
+
+* forcing release ([13b1098](https://github.com/codibre/nodejs-tree-key-cache/commit/13b1098dc9826b113f406457f053a728fda45ccc))
+
 # [0.3.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.2.0...v0.3.0) (2023-09-12)
 
 
