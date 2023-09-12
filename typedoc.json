@@ -6,6 +6,5 @@
   "name": "nodejs-tree-key-cache",
   "includeVersion": true,
   "disableSources": true,
-  "entryPoints": ["src/index.ts"],
-  "exclude": []
+  "entryPoints": ["src/index.ts"]
 }
