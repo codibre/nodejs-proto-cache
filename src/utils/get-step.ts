@@ -1,10 +1,11 @@
-import { Step } from 'src/types';
+import { ChainedObject, Step } from 'src/types';
 
 export function getStep<T>(
 	deserialize: (item: string) => T,
 	buffer: string | undefined,
 	key: string,
 	level: number,
+	nodeRef: ChainedObject,
 	createLeaf?: () => T,
 ): Step<T> {
 	let value: T;
@@ -16,5 +17,5 @@ export function getStep<T>(
 	} else {
 		value = deserialize(buffer.toString());
 	}
-	return { key, value, level };
+	return { key, value, level, nodeRef };
 }

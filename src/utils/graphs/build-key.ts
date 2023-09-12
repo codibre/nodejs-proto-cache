@@ -1,8 +1,8 @@
-import { ChainedObject } from './tree-pre-order-traversal';
+import { ChainedObject } from 'src/types';
 
-export function buildKey<T extends ChainedObject>(breadthNode: T) {
-	const keys: string[] = [breadthNode.key];
-	let parent = breadthNode.parentRef;
+export function buildKey<T extends ChainedObject>(nodeRef: T) {
+	const keys: string[] = [nodeRef.key];
+	let parent = nodeRef.parentRef;
 	while (parent) {
 		keys.push(parent.key);
 		parent = parent.parentRef;

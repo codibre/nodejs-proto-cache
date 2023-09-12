@@ -1,5 +1,6 @@
 import { getChainedKey } from './utils/get-chained-key';
 import {
+	ChainedObject,
 	FullSetItem,
 	KeyTreeCacheOptions,
 	KeyTreeCacheStorage,
@@ -38,6 +39,7 @@ export class TreeKeyCache<T> {
 		let upTo = Math.min(lastLevelKey, length);
 		let prevKeys = '';
 		let level = 0;
+		let nodeRef: ChainedObject | undefined;
 		while (level < upTo) {
 			let key: string;
 			let chainedKey: string;
@@ -48,7 +50,8 @@ export class TreeKeyCache<T> {
 			}
 
 			level++;
-			yield getStep(deserialize, buffer, key, level);
+			nodeRef = { key, parentRef: nodeRef };
+			yield getStep(deserialize, buffer, key, level, nodeRef);
 		}
 
 		if (length > level) {
@@ -65,14 +68,16 @@ export class TreeKeyCache<T> {
 				const { [TreeKeys.value]: v } = tree;
 				level++;
 				if (v) {
-					yield getStep(deserialize, v, key, level);
+					nodeRef = { key, parentRef: nodeRef };
+					yield getStep(deserialize, v, key, level, nodeRef);
 				}
 				key = getKey(path, level);
 				tree = tree[TreeKeys.children]?.[key];
 			}
 			if (tree?.[TreeKeys.value]) {
 				level++;
-				yield getStep(deserialize, tree[TreeKeys.value], key, level);
+				nodeRef = { key, parentRef: nodeRef };
+				yield getStep(deserialize, tree[TreeKeys.value], key, level, nodeRef);
 			}
 		}
 	}
@@ -98,6 +103,7 @@ export class TreeKeyCache<T> {
 		let currentLevel = previousKeys.length;
 		let prevKeys = previousKeys.join(':');
 		let chainedKey: string | undefined;
+		let nodeRef: ChainedObject | undefined;
 		let key = '';
 		while (currentLevel < upTo) {
 			({ prevKeys, chainedKey, key } = getChainedKey(
@@ -109,11 +115,13 @@ export class TreeKeyCache<T> {
 				await this.storage.get(chainedKey)
 			)?.toString();
 			currentLevel++;
+			nodeRef = { key, parentRef: nodeRef };
 			const step = getStep(
 				deserialize,
 				currentSerialized,
 				key,
 				currentLevel,
+				nodeRef,
 				createValue,
 			);
 			yield step;
@@ -139,11 +147,13 @@ export class TreeKeyCache<T> {
 			while (currentLevel < upTo) {
 				const currentSerialized = currentTree[TreeKeys.value];
 				currentLevel++;
+				nodeRef = { key, parentRef: nodeRef };
 				const step = getStep(
 					deserialize,
 					currentSerialized,
 					key,
 					currentLevel,
+					nodeRef,
 					createValue,
 				);
 				yield step;
@@ -162,11 +172,13 @@ export class TreeKeyCache<T> {
 				currentTree = nextTree;
 			}
 			const currentSerialized = currentTree[TreeKeys.value];
+			nodeRef = { key, parentRef: nodeRef };
 			const step = getStep(
 				deserialize,
 				currentSerialized,
 				key,
 				currentLevel,
+				nodeRef,
 				createValue,
 			);
 			yield step;
@@ -221,6 +233,7 @@ export class TreeKeyCache<T> {
 				currentSerialized,
 				key,
 				level,
+				breadthNode,
 				createValue,
 			);
 			const oldValue = old.value;
