@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.2.0...v0.3.0) (2023-09-12)
+
+
+### Features
+
+* exposing buildKey ([#3](https://github.com/codibre/nodejs-tree-key-cache/issues/3)) ([ef4a1c5](https://github.com/codibre/nodejs-tree-key-cache/commit/ef4a1c58385763221b6f0217c5c2985d8669ff48))
+
 # [0.2.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.1.0...v0.2.0) (2023-09-11)
 
 
