@@ -1,16 +1,10 @@
-import { Tree, TreeKeys } from '../../types';
+import { ChainedObject, Tree, TreeKeys } from '../../types';
 
 export interface SimpleList<T> {
 	push(item: T): unknown;
 	pop(): T | undefined;
 	length: number;
 }
-
-export interface ChainedObject {
-	key: string;
-	parentRef?: ChainedObject;
-}
-
 export interface TraversalItem<T> extends ChainedObject {
 	value: T | undefined;
 	level: number;

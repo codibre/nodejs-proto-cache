@@ -17,6 +17,7 @@ export interface Step<T> {
 	value: T;
 	key: string;
 	level: number;
+	nodeRef: ChainedObject;
 }
 
 export interface FullSetItem<T> {
@@ -24,4 +25,9 @@ export interface FullSetItem<T> {
 	oldValue: T | undefined;
 	key: string;
 	level: number;
+}
+
+export interface ChainedObject {
+	key: string;
+	parentRef?: ChainedObject;
 }

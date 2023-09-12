@@ -41,12 +41,42 @@ describe(TreeKeyCache.name, () => {
 			}
 
 			expect(result).toEqual([
-				{ key: 'a', level: 1, value: { value: 10 } },
-				{ key: 'b', level: 2, value: { value: 20 } },
-				{ key: 'c', level: 3, value: { value: 30 } },
-				{ key: 'd', level: 4, value: { value: 40 } },
-				{ key: 'e', level: 5, value: { value: 50 } },
-				{ key: 'f', level: 6, value: { value: 60 } },
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: 50 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: 60 },
+					nodeRef: expect.any(Object),
+				},
 			]);
 		});
 
@@ -59,11 +89,36 @@ describe(TreeKeyCache.name, () => {
 			}
 
 			expect(result).toEqual([
-				{ key: 'a', level: 1, value: { value: 10 } },
-				{ key: 'b', level: 2, value: { value: 20 } },
-				{ key: 'c', level: 3, value: { value: 30 } },
-				{ key: 'd', level: 4, value: { value: 40 } },
-				{ key: 'e', level: 5, value: { value: 50 } },
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: 50 },
+					nodeRef: expect.any(Object),
+				},
 			]);
 		});
 
@@ -76,11 +131,36 @@ describe(TreeKeyCache.name, () => {
 			}
 
 			expect(result).toEqual([
-				{ key: 'a', level: 1, value: { value: 10 } },
-				{ key: 'b', level: 2, value: { value: 20 } },
-				{ key: 'c', level: 3, value: { value: 30 } },
-				{ key: 'd', level: 4, value: { value: 40 } },
-				{ key: 'e', level: 5, value: { value: 50 } },
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: 50 },
+					nodeRef: expect.any(Object),
+				},
 			]);
 		});
 
@@ -93,10 +173,30 @@ describe(TreeKeyCache.name, () => {
 			}
 
 			expect(result).toEqual([
-				{ key: 'a', level: 1, value: { value: 10 } },
-				{ key: 'b', level: 2, value: { value: 20 } },
-				{ key: 'c', level: 3, value: { value: 30 } },
-				{ key: 'd', level: 4, value: { value: 40 } },
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
 			]);
 		});
 
@@ -109,9 +209,24 @@ describe(TreeKeyCache.name, () => {
 			}
 
 			expect(result).toEqual([
-				{ key: 'a', level: 1, value: { value: 10 } },
-				{ key: 'b', level: 2, value: { value: 20 } },
-				{ key: 'c', level: 3, value: { value: 30 } },
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
 			]);
 		});
 	});
