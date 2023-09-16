@@ -9,7 +9,7 @@ import {
 	Tree,
 	TreeKeys,
 } from './types';
-import { getKey, getStep, getFullSetItem, isDefined } from './utils';
+import { getKey, getStep, getFullSetItem, isUndefined } from './utils';
 import {
 	createTraversalItem,
 	treePreOrderBreadthFirstSearch,
@@ -71,7 +71,7 @@ export class TreeKeyCache<T> {
 				let tree: Tree<string> | undefined = JSON.parse(buffer);
 				while (nodeRef && nodeRef.level < length && tree) {
 					const { [TreeKeys.value]: v } = tree;
-					if (isDefined(v)) {
+					if (!isUndefined(v)) {
 						yield getStep(deserialize, v, nodeRef) as IterateStep<T>;
 					}
 					({ nodeRef, tree } = this.getNextTreeNode(
@@ -82,7 +82,7 @@ export class TreeKeyCache<T> {
 						treeRef,
 					));
 				}
-				if (tree && isDefined(tree[TreeKeys.value]) && nodeRef) {
+				if (tree && !isUndefined(tree[TreeKeys.value]) && nodeRef) {
 					nodeRef = createTraversalItem(
 						nodeRef.key,
 						nodeRef.level,
@@ -118,7 +118,7 @@ export class TreeKeyCache<T> {
 	 * @param path The path to be traversed
 	 */
 	async setNode(path: string[], value: T): Promise<void> {
-		if (value === undefined) {
+		if (isUndefined(value)) {
 			return;
 		}
 		const { length } = path;
@@ -166,7 +166,7 @@ export class TreeKeyCache<T> {
 						treeRef,
 					));
 				}
-				if (tree && isDefined(tree[TreeKeys.value]) && nodeRef) {
+				if (tree && !isUndefined(tree[TreeKeys.value]) && nodeRef) {
 					nodeRef = createTraversalItem(
 						nodeRef.key,
 						nodeRef.level,
@@ -207,7 +207,7 @@ export class TreeKeyCache<T> {
 		treeRef: Tree<string>,
 	) {
 		const key = path[level];
-		if (!isDefined(key)) {
+		if (isUndefined(key)) {
 			throw new TypeError('Invalid path');
 		}
 		level++;
@@ -330,7 +330,7 @@ export class TreeKeyCache<T> {
 		changed: boolean,
 		currentTree: Tree<string>,
 	) {
-		if (isDefined(step.value)) {
+		if (!isUndefined(step.value)) {
 			const serialized = serialize(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
@@ -398,7 +398,7 @@ export class TreeKeyCache<T> {
 		currentSerialized: string | undefined,
 		chainedKey: string,
 	) {
-		if (isDefined(step.value)) {
+		if (!isUndefined(step.value)) {
 			const serialized = serialize(step.value);
 			if (currentSerialized !== serialized) {
 				await this.storage.set(chainedKey, serialized);
@@ -433,10 +433,10 @@ export class TreeKeyCache<T> {
 				currentTree[TreeKeys.children] ??= {};
 				let next: Tree<string> | undefined =
 					currentTree[TreeKeys.children][key];
-				if (next === undefined || next === null) {
+				if (isUndefined(next)) {
 					next = currentTree[TreeKeys.children][key] = {};
 					const value = createValue(depthNode);
-					if (isDefined(value)) {
+					if (!isUndefined(value)) {
 						changed = true;
 						next[TreeKeys.value] = serialize(value);
 					}
