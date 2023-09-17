@@ -1,4 +1,4 @@
-import { isUndefined } from './is-defined';
+import { isUndefined } from './is-undefined';
 
 export function getKey(keys: string[], index: number) {
 	const key = keys[index];
