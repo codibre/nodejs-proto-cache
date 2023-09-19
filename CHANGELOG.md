@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.3.1...v0.4.0) (2023-09-19)
+
+
+### Features
+
+* implementing leaf only methods ([#4](https://github.com/codibre/nodejs-tree-key-cache/issues/4)) ([ae61e36](https://github.com/codibre/nodejs-tree-key-cache/commit/ae61e36889c7a87638db8fd863c1d22b1d86cd93))
+
 ## [0.3.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.3.0...v0.3.1) (2023-09-12)
 
 
