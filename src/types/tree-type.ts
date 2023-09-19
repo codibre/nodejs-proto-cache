@@ -14,10 +14,14 @@ export interface Tree<T> {
 }
 
 export interface Step<T> {
-	value: T;
+	value: T | undefined;
 	key: string;
 	level: number;
 	nodeRef: ChainedObject;
+}
+
+export interface IterateStep<T> extends Step<T> {
+	value: T;
 }
 
 export interface FullSetItem<T> {
@@ -29,5 +33,6 @@ export interface FullSetItem<T> {
 
 export interface ChainedObject {
 	key: string;
+	level: number;
 	parentRef?: ChainedObject;
 }

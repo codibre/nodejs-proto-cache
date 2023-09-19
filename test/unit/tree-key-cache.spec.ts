@@ -1,4 +1,4 @@
-import { Step, Tree, TreeKeyCache, TreeKeys } from './../../src';
+import { Step, Tree, TreeKeyCache, TreeKeys } from '../../src';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -231,6 +231,70 @@ describe(TreeKeyCache.name, () => {
 		});
 	});
 
+	describe(proto.getNode.name, () => {
+		it('should return the step at the end of the path', async () => {
+			const result = await target.getNode(['a', 'b', 'c', 'd', 'e', 'f']);
+
+			expect(result).toEqual({
+				key: 'f',
+				nodeRef: expect.any(Object),
+				level: 6,
+				value: { value: 60 },
+			} as Step<{ value: number }>);
+		});
+
+		it('should return the step at the end of the path when it ends at storage level', async () => {
+			const result = await target.getNode(['a', 'b', 'c']);
+
+			expect(result).toEqual({
+				key: 'c',
+				nodeRef: expect.any(Object),
+				level: 3,
+				value: { value: 30 },
+			} as Step<{ value: number }>);
+		});
+
+		it('should return the step at the end of the path when it is at the start of tree level', async () => {
+			const result = await target.getNode(['a', 'b', 'c', 'd']);
+
+			expect(result).toEqual({
+				key: 'd',
+				nodeRef: expect.any(Object),
+				level: 4,
+				value: { value: 40 },
+			} as Step<{ value: number }>);
+		});
+
+		it('should return the step at the end of the path when it us at in the middle of tree level', async () => {
+			const result = await target.getNode(['a', 'b', 'c', 'd', 'e']);
+
+			expect(result).toEqual({
+				key: 'e',
+				nodeRef: expect.any(Object),
+				level: 5,
+				value: { value: 50 },
+			} as Step<{ value: number }>);
+		});
+
+		it('should return undefined when a node is not found at the start of tree level', async () => {
+			const result = await target.getNode(['a', 'b', 'c', 'd2']);
+
+			expect(result).toBeUndefined();
+		});
+
+		it('should return undefined when the path does not exist at the storage level', async () => {
+			const result = await target.getNode(['a', 'b2', 'c', 'd', 'e', 'f']);
+
+			expect(result).toBeUndefined();
+		});
+
+		it('should return undefined when the path does not exist at the tree level', async () => {
+			const result = await target.getNode(['a', 'b', 'c', 'd', 'e2', 'f']);
+
+			expect(result).toBeUndefined();
+		});
+	});
+
 	describe(proto.deepTreeSet.name, () => {
 		it('should add the path when some node in the key level does not exist and path goes up to key level, saving values changed during iteration', async () => {
 			const iterable = target.deepTreeSet(['a', 'c', 'b'], () => ({
@@ -239,7 +303,7 @@ describe(TreeKeyCache.name, () => {
 			let first = true;
 
 			for await (const item of iterable) {
-				if (!item.value.value) {
+				if (item.value && !item.value.value) {
 					if (first) first = false;
 					else {
 						item.value.value = 99;
@@ -281,7 +345,7 @@ describe(TreeKeyCache.name, () => {
 			let first = true;
 
 			for await (const item of iterable) {
-				if (!item.value.value) {
+				if (item.value && !item.value.value) {
 					if (first) first = false;
 					else {
 						item.value.value = 99;
@@ -325,7 +389,7 @@ describe(TreeKeyCache.name, () => {
 			let first = true;
 
 			for await (const item of iterable) {
-				if (!item.value.value) {
+				if (item.value && !item.value.value) {
 					if (first) first = false;
 					else {
 						item.value.value = 99;
@@ -352,6 +416,208 @@ describe(TreeKeyCache.name, () => {
 									v: '{"value":0}',
 									[TreeKeys.children]: {
 										j: { v: '{"value":99}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+	});
+
+	describe(proto.setNode.name, () => {
+		it('should set node at storage level', async () => {
+			const result = await target.setNode(['a', 'c', 'b'], { value: 123 });
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					['a:c:b', '{"value":123}'],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should set node at the start of tree level', async () => {
+			const result = await target.setNode(['a', 'c', 'b', 'a'], { value: 123 });
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:c:b:a',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":123}',
+						}),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should set node at the middle of tree level', async () => {
+			const result = await target.setNode(['a', 'c', 'b', 'a', 'b'], {
+				value: 123,
+			});
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:c:b:a',
+						JSON.stringify({
+							[TreeKeys.children]: {
+								b: { [TreeKeys.value]: '{"value":123}' },
+							},
+						}),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should not set node at the start of storage level when value is undefined', async () => {
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a'],
+				undefined as any,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should not set node at the start of tree level when value is undefined', async () => {
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a'],
+				undefined as any,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should not set node at the middle of tree level when value is undefined', async () => {
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a', 'b'],
+				undefined as any,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
 									},
 								},
 							},

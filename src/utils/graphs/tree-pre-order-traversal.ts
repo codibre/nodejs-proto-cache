@@ -1,14 +1,18 @@
 import { ChainedObject, Tree, TreeKeys } from '../../types';
+import { createTraversalItem } from './create-traversal-item';
 
 export interface SimpleList<T> {
 	push(item: T): unknown;
 	pop(): T | undefined;
 	length: number;
 }
+
+export const treeRefSymbol = Symbol('treeRef');
+export const valueSymbol = Symbol('value');
+
 export interface TraversalItem<T> extends ChainedObject {
-	value: T | undefined;
-	level: number;
-	treeRef: Tree<T>;
+	[valueSymbol]: T | undefined;
+	[treeRefSymbol]: Tree<T>;
 }
 
 /**
@@ -33,13 +37,7 @@ export function* treePreOrderTraversal<T>(
 		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
 		let node: TraversalItem<T> | undefined;
 		if (key) {
-			node = {
-				key,
-				value,
-				level,
-				treeRef,
-				parentRef,
-			};
+			node = createTraversalItem(key, level, parentRef, treeRef, value);
 			yield node;
 		}
 		if (children) {

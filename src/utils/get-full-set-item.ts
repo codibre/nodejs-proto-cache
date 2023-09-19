@@ -1,5 +1,5 @@
 import { FullSetItem, Tree, TreeKeys } from '../types';
-import { TraversalItem } from './graphs/tree-pre-order-traversal';
+import { TraversalItem, valueSymbol } from './graphs/tree-pre-order-traversal';
 
 export function getFullSetItem<T>(
 	currentTree: Tree<string>,
@@ -10,7 +10,7 @@ export function getFullSetItem<T>(
 	const baseLevel = breadthNode.level;
 	const node: FullSetItem<T> = {
 		oldValue: currentSerialized ? deserialize(currentSerialized) : undefined,
-		value: breadthNode.value,
+		value: breadthNode[valueSymbol],
 		key: breadthNode.key,
 		level: baseLevel,
 	};
