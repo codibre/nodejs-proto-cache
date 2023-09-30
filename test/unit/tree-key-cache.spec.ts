@@ -1,4 +1,5 @@
 import { Step, Tree, TreeKeyCache, TreeKeys } from '../../src';
+import * as dontWaitLib from 'src/utils/dont-wait';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -296,6 +297,19 @@ describe(TreeKeyCache.name, () => {
 	});
 
 	describe(proto.deepTreeSet.name, () => {
+		let acquire: jest.SpyInstance;
+		let release: jest.SpyInstance;
+
+		beforeEach(() => {
+			release = jest.fn().mockResolvedValue(undefined);
+			acquire = jest
+				.spyOn(target['options'].semaphore, 'acquire')
+				.mockResolvedValue(release as any);
+			jest.spyOn(dontWaitLib, 'dontWait').mockImplementation((c: Function) => {
+				c();
+			});
+		});
+
 		it('should add the path when some node in the key level does not exist and path goes up to key level, saving values changed during iteration', async () => {
 			const iterable = target.deepTreeSet(['a', 'c', 'b'], () => ({
 				value: 0,
@@ -336,6 +350,8 @@ describe(TreeKeyCache.name, () => {
 					['a', '{"value":10}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+			expect(acquire).toHaveCallsLike(['a'], ['a:c'], ['a:c:b']);
+			expect(release).toHaveCallsLike([], [], []);
 		});
 
 		it('should add the path when some node in the key level does not exist and path goes up to start tree level, saving values changed during iteration', async () => {
@@ -379,6 +395,8 @@ describe(TreeKeyCache.name, () => {
 					['a:c:b:d', JSON.stringify({ v: '{"value":99}' })],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+			expect(acquire).toHaveCallsLike(['a'], ['a:c'], ['a:c:b'], ['a:c:b:d']);
+			expect(release).toHaveCallsLike([], [], [], []);
 		});
 
 		it('should add the path when some node in the tree level does not exist and path goes up to some tree level, saving values changed during iteration', async () => {
@@ -426,6 +444,8 @@ describe(TreeKeyCache.name, () => {
 					['a', '{"value":10}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+			expect(acquire).toHaveCallsLike(['a'], ['a:b'], ['a:b:c'], ['a:b:c:d']);
+			expect(release).toHaveCallsLike([], [], [], []);
 		});
 	});
 
@@ -632,6 +652,19 @@ describe(TreeKeyCache.name, () => {
 	});
 
 	describe(proto.fullTreeSet.name, () => {
+		let acquire: jest.SpyInstance;
+		let release: jest.SpyInstance;
+
+		beforeEach(() => {
+			release = jest.fn().mockResolvedValue(undefined);
+			acquire = jest
+				.spyOn(target['options'].semaphore, 'acquire')
+				.mockResolvedValue(release as any);
+			jest.spyOn(dontWaitLib, 'dontWait').mockImplementation((c: Function) => {
+				c();
+			});
+		});
+
 		it('should update each tree node on storage', async () => {
 			const tree: Tree<{ value: number }> = {
 				[TreeKeys.children]: {
@@ -700,6 +733,8 @@ describe(TreeKeyCache.name, () => {
 					['a', '{"value":11}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+			expect(acquire).toHaveCallsLike(['a'], ['a:b'], ['a:b:c'], ['a:b:c:d']);
+			expect(release).toHaveCallsLike([], [], [], []);
 		});
 
 		it('should update each tree node on storage and add any non existing node', async () => {
@@ -780,6 +815,13 @@ describe(TreeKeyCache.name, () => {
 					['a:b1', '{"value":0}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+			expect(acquire).toHaveCallsLike(
+				['a'],
+				['a:b1'],
+				['a:b1:c1'],
+				['a:b1:c1:d1'],
+			);
+			expect(release).toHaveCallsLike([], [], [], []);
 		});
 	});
 });
