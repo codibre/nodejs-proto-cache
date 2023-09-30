@@ -22,11 +22,16 @@ import {
 	valueSymbol,
 } from './utils/graphs/tree-pre-order-traversal';
 
+const defaultSerializer = {
+	deserialize: JSON.parse.bind(JSON),
+	serialize: JSON.stringify.bind(JSON),
+};
+
 const defaultOptions: Required<
 	Omit<KeyTreeCacheOptions<unknown>, 'keyLevelNodes'>
 > = {
-	deserialize: JSON.parse.bind(JSON),
-	serialize: JSON.stringify.bind(JSON),
+	...defaultSerializer,
+	treeSerializer: defaultSerializer,
 	semaphore: {
 		acquire: async () => async () => undefined,
 	},
@@ -95,7 +100,8 @@ export class TreeKeyCache<T> {
 			const chainedKey = buildKey(nodeRef);
 			const buffer = await this.storage.get(chainedKey);
 			if (buffer) {
-				let tree: Tree<string> | undefined = JSON.parse(buffer);
+				let tree: Tree<string> | undefined =
+					this.options.treeSerializer.deserialize(buffer);
 				while (nodeRef && nodeRef.level < length && tree) {
 					const { [TreeKeys.value]: v } = tree;
 					if (!isUndefined(v)) {
@@ -177,7 +183,8 @@ export class TreeKeyCache<T> {
 			if (nodeRef.level < keyLevelNodes) {
 				nodeRef[valueSymbol] = buffer;
 			} else if (buffer) {
-				let tree: Tree<string> | undefined = JSON.parse(buffer);
+				let tree: Tree<string> | undefined =
+					this.options.treeSerializer.deserialize(buffer);
 				while (nodeRef && nodeRef.level < length && tree) {
 					({ nodeRef, tree } = this.getNextTreeNode(
 						path,
@@ -289,7 +296,9 @@ export class TreeKeyCache<T> {
 			const release = await this.options.semaphore.acquire(chainedKey);
 			try {
 				const buffer = await this.storage.get(chainedKey);
-				const rootTree: Tree<string> = buffer ? JSON.parse(buffer) : {};
+				const rootTree: Tree<string> = buffer
+					? this.options.treeSerializer.deserialize(buffer)
+					: {};
 				let currentTree = rootTree;
 				let changed = false;
 				upTo = length - 1;
@@ -325,7 +334,10 @@ export class TreeKeyCache<T> {
 					currentTree,
 				);
 				if (changed) {
-					await this.storage.set(chainedKey, JSON.stringify(rootTree));
+					await this.storage.set(
+						chainedKey,
+						this.options.treeSerializer.serialize(rootTree),
+					);
 				}
 			} finally {
 				dontWait(release);
@@ -445,7 +457,7 @@ export class TreeKeyCache<T> {
 		const { [treeRefSymbol]: treeRef } = breadthNode;
 		const serializedTree = await this.storage.get(chainedKey);
 		const rootTree: Tree<string> = serializedTree
-			? JSON.parse(serializedTree)
+			? this.options.treeSerializer.deserialize(serializedTree)
 			: {};
 		let currentTree: Tree<string> | undefined = rootTree;
 		const stack = [];
@@ -483,7 +495,10 @@ export class TreeKeyCache<T> {
 		}
 
 		if (changed) {
-			await this.storage.set(chainedKey, JSON.stringify(rootTree));
+			await this.storage.set(
+				chainedKey,
+				this.options.treeSerializer.serialize(rootTree),
+			);
 		}
 	}
 }
