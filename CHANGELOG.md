@@ -1,3 +1,10 @@
+# [0.5.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.4.0...v0.5.0) (2023-09-30)
+
+
+### Features
+
+* semaphore support ([#5](https://github.com/codibre/nodejs-tree-key-cache/issues/5)) ([6e2eae1](https://github.com/codibre/nodejs-tree-key-cache/commit/6e2eae16fa8c963f4d13e28ef08789e536575319))
+
 # [0.4.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.3.1...v0.4.0) (2023-09-19)
 
 
