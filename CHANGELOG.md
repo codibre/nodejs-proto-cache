@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.5.0...v0.6.0) (2023-10-01)
+
+
+### Features
+
+* adding custom tree serializer ([#6](https://github.com/codibre/nodejs-tree-key-cache/issues/6)) ([76d32fe](https://github.com/codibre/nodejs-tree-key-cache/commit/76d32fe9ec8aed4c68bb28012cb910b89a7e019b))
+
 # [0.5.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.4.0...v0.5.0) (2023-09-30)
 
 
