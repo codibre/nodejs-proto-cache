@@ -1,3 +1,10 @@
+# [0.8.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.7.1...v0.8.0) (2023-10-01)
+
+
+### Features
+
+* setNode callback support, custom ttl support, better setNode semaphore control ([#7](https://github.com/codibre/nodejs-tree-key-cache/issues/7)) ([3f2083a](https://github.com/codibre/nodejs-tree-key-cache/commit/3f2083af42d8848eb73f89c2426aad9c8d37ebff))
+
 ## [0.7.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.7.0...v0.7.1) (2023-10-01)
 
 
