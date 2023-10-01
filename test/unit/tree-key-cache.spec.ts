@@ -305,9 +305,11 @@ describe(TreeKeyCache.name, () => {
 			acquire = jest
 				.spyOn(target['options'].semaphore, 'acquire')
 				.mockResolvedValue(release as any);
-			jest.spyOn(dontWaitLib, 'dontWait').mockImplementation((c: Function) => {
-				c();
-			});
+			jest
+				.spyOn(dontWaitLib, 'dontWait')
+				.mockImplementation((c: Function | undefined) => {
+					c?.();
+				});
 		});
 
 		it('should add the path when some node in the key level does not exist and path goes up to key level, saving values changed during iteration', async () => {
@@ -660,9 +662,11 @@ describe(TreeKeyCache.name, () => {
 			acquire = jest
 				.spyOn(target['options'].semaphore, 'acquire')
 				.mockResolvedValue(release as any);
-			jest.spyOn(dontWaitLib, 'dontWait').mockImplementation((c: Function) => {
-				c();
-			});
+			jest
+				.spyOn(dontWaitLib, 'dontWait')
+				.mockImplementation((c: Function | undefined) => {
+					c?.();
+				});
 		});
 
 		it('should update each tree node on storage', async () => {
