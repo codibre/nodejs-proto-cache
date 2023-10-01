@@ -144,14 +144,27 @@ export class TreeKeyCache<T, R = string> {
 	 * Sets the value of the node for the provided path
 	 * @param path The path to be traversed
 	 */
-	async setNode(path: string[], value: T): Promise<void> {
+	async setNode(
+		path: string[],
+		value: T | (() => Promise<T>),
+		ttl?: number,
+	): Promise<void> {
 		if (isUndefined(value)) {
 			return;
 		}
 		const { length } = path;
-		for await (const item of this.deepTreeSet(path, () => undefined)) {
+		for await (const item of this.deepTreeSet(
+			path,
+			() => undefined,
+			ttl,
+			[],
+			length,
+		)) {
 			if (item.level === length) {
-				item.value = value;
+				item.value =
+					typeof value === 'function'
+						? await (value as () => Promise<T>)()
+						: value;
 			}
 		}
 	}
@@ -252,7 +265,9 @@ export class TreeKeyCache<T, R = string> {
 	async *deepTreeSet(
 		path: string[],
 		createValue: (node: ChainedObject) => T | undefined,
+		ttl?: number,
 		previousKeys: string[] = [],
+		minLevelSemaphore = 0,
 	): AsyncIterable<Step<T>> {
 		const { keyLevelNodes } = this.options;
 		const { length } = path;
@@ -269,7 +284,10 @@ export class TreeKeyCache<T, R = string> {
 				currentLevel,
 				prevKeys,
 			));
-			const release = await this.options.semaphore.acquire(chainedKey);
+			const release =
+				minLevelSemaphore <= currentLevel
+					? await this.options.semaphore.acquire(chainedKey)
+					: undefined;
 			try {
 				const currentSerialized = await this.storage.get(chainedKey);
 				currentLevel++;
@@ -291,7 +309,10 @@ export class TreeKeyCache<T, R = string> {
 				prevKeys,
 			));
 			currentLevel++;
-			const release = await this.options.semaphore.acquire(chainedKey);
+			const release =
+				minLevelSemaphore <= currentLevel
+					? await this.options.semaphore.acquire(chainedKey)
+					: undefined;
 			try {
 				const buffer = await this.storage.get(chainedKey);
 				const rootTree: Tree<R> = buffer
@@ -335,6 +356,7 @@ export class TreeKeyCache<T, R = string> {
 					await this.storage.set(
 						chainedKey,
 						this.options.treeSerializer.serialize(rootTree),
+						ttl,
 					);
 				}
 			} finally {
@@ -367,6 +389,7 @@ export class TreeKeyCache<T, R = string> {
 	async *fullTreeSet(
 		tree: Tree<T>,
 		createValue: (node: ChainedObject) => T,
+		minLevelSemaphore = 0,
 	): AsyncIterable<FullSetItem<T>> {
 		const iterable = treePreOrderBreadthFirstSearch(tree);
 		const { keyLevelNodes } = this.options;
@@ -377,7 +400,10 @@ export class TreeKeyCache<T, R = string> {
 				break;
 			}
 			const chainedKey = buildKey(breadthNode);
-			const release = await this.options.semaphore.acquire(chainedKey);
+			const release =
+				minLevelSemaphore <= level
+					? await this.options.semaphore.acquire(chainedKey)
+					: undefined;
 			try {
 				if (level === keyLevelNodes) {
 					yield* this.saveFullTreeValue(breadthNode, chainedKey, createValue);
