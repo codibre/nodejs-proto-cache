@@ -30,7 +30,7 @@ const defaultSerializer = {
 const defaultOptions: Required<
 	Omit<KeyTreeCacheOptions<unknown>, 'keyLevelNodes'>
 > = {
-	...defaultSerializer,
+	valueSerializer: defaultSerializer,
 	treeSerializer: defaultSerializer,
 	semaphore: {
 		acquire: async () => async () => undefined,
@@ -61,7 +61,7 @@ export class TreeKeyCache<T> {
 			}
 			value = createValue(nodeRef);
 		} else {
-			value = this.options.deserialize(buffer.toString());
+			value = this.options.valueSerializer.deserialize(buffer.toString());
 		}
 		return { key: nodeRef.key, value, level: nodeRef.level, nodeRef };
 	}
@@ -352,7 +352,7 @@ export class TreeKeyCache<T> {
 		currentTree: Tree<string>,
 	) {
 		if (!isUndefined(step.value)) {
-			const serialized = this.options.serialize(step.value);
+			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
 				currentTree[TreeKeys.value] = serialized;
@@ -409,7 +409,7 @@ export class TreeKeyCache<T> {
 		chainedKey: string,
 	) {
 		if (!isUndefined(step.value)) {
-			const serialized = this.options.serialize(step.value);
+			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
 				await this.storage.set(chainedKey, serialized);
 			}
@@ -424,7 +424,7 @@ export class TreeKeyCache<T> {
 		const baseLevel = breadthNode.level;
 		const node: FullSetItem<T> = {
 			oldValue: currentSerialized
-				? this.options.deserialize(currentSerialized)
+				? this.options.valueSerializer.deserialize(currentSerialized)
 				: undefined,
 			value: breadthNode[valueSymbol],
 			key: breadthNode.key,
@@ -440,7 +440,7 @@ export class TreeKeyCache<T> {
 	) {
 		const { node, currentSerialized } = item;
 		if (node.value !== undefined) {
-			const serialized = this.options.serialize(node.value);
+			const serialized = this.options.valueSerializer.serialize(node.value);
 			if (serialized !== currentSerialized) {
 				currentTree[TreeKeys.value] = serialized;
 				changed = true;
@@ -479,7 +479,8 @@ export class TreeKeyCache<T> {
 					const value = createValue(depthNode);
 					if (!isUndefined(value)) {
 						changed = true;
-						next[TreeKeys.value] = this.options.serialize(value);
+						next[TreeKeys.value] =
+							this.options.valueSerializer.serialize(value);
 					}
 				}
 				currentTree = next;

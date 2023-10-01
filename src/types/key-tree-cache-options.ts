@@ -9,9 +9,9 @@ export interface Serializer<A, B> {
 	deserialize(b: B): A;
 }
 
-export interface KeyTreeCacheOptions<T, R = string>
-	extends Partial<Serializer<T, R>> {
+export interface KeyTreeCacheOptions<T, R = string> {
 	keyLevelNodes: number;
+	valueSerializer?: Serializer<T, R>;
 	treeSerializer?: Serializer<Tree<R>, R>;
 	semaphore?: Semaphore;
 }
