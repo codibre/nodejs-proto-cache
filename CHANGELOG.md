@@ -1,3 +1,10 @@
+## [0.7.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.7.0...v0.7.1) (2023-10-01)
+
+
+### Bug Fixes
+
+* accepting generic target type ([f446989](https://github.com/codibre/nodejs-tree-key-cache/commit/f446989e991f32d1eb5a6de8c71aa80b9866feb4))
+
 # [0.7.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.6.0...v0.7.0) (2023-10-01)
 
 
