@@ -6,11 +6,13 @@ export type TreeChildren<T> = {
 export enum TreeKeys {
 	children = 'c',
 	value = 'v',
+	deadline = 'd',
 }
 
 export interface Tree<T> {
 	[TreeKeys.children]?: TreeChildren<T>;
 	[TreeKeys.value]?: T;
+	[TreeKeys.deadline]?: number;
 }
 
 export interface Step<T> {

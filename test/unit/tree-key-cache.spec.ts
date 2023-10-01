@@ -5,8 +5,10 @@ const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
 	let target: TreeKeyCache<{ value: number }>;
 	let map: Map<string, string>;
+	let ttlMap: Map<string, number>;
 
 	beforeEach(() => {
+		ttlMap = new Map();
 		map = new Map([
 			['a', '{"value":10}'],
 			['a:b', '{"value":20}'],
@@ -27,9 +29,21 @@ describe(TreeKeyCache.name, () => {
 			],
 		]);
 
-		target = new TreeKeyCache(map, {
-			keyLevelNodes: 4,
-		});
+		target = new TreeKeyCache(
+			{
+				get: (k) => map.get(k),
+				set: (k, v, ttl) => {
+					map.set(k, v);
+					if (ttl) {
+						ttlMap.set(k, ttl);
+					}
+				},
+				getCurrentTtl: (k) => ttlMap.get(k),
+			},
+			{
+				keyLevelNodes: 4,
+			},
+		);
 	});
 
 	describe(proto.iteratePath.name, () => {
@@ -226,6 +240,59 @@ describe(TreeKeyCache.name, () => {
 					key: 'c',
 					level: 3,
 					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+			]);
+		});
+		it('should return an iterable for the values stored in partial keys and in the tree-value that are not expired yet', async () => {
+			const result: Step<{ value: number }>[] = [];
+			const now = 292929;
+			jest.spyOn(Date, 'now').mockReturnValue(now);
+			map.delete('a:b');
+			map.set(
+				'a:b:c:d',
+				JSON.stringify({
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
+						e: {
+							v: '{"value":50}',
+							[TreeKeys.deadline]: now - 10,
+							[TreeKeys.children]: {
+								f: { v: '{"value":60}', [TreeKeys.deadline]: now + 10 },
+							},
+						},
+					},
+				} as Tree<string>),
+			);
+
+			const iterable = target.iteratePath(['a', 'b', 'c', 'd', 'e', 'f']);
+			for await (const item of iterable) {
+				result.push(item);
+			}
+
+			expect(result).toEqual([
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: 60 },
 					nodeRef: expect.any(Object),
 				},
 			]);
@@ -482,6 +549,41 @@ describe(TreeKeyCache.name, () => {
 			);
 		});
 
+		it('should set node at storage level with the given ttl', async () => {
+			const result = await target.setNode(
+				['a', 'c', 'b'],
+				{ value: 123 },
+				1919,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					['a:c:b', '{"value":123}'],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+			expect(ttlMap.get('a:c:b')).toEqual(1919);
+		});
+
 		it('should set node at the start of tree level', async () => {
 			const result = await target.setNode(['a', 'c', 'b', 'a'], { value: 123 });
 
@@ -554,6 +656,157 @@ describe(TreeKeyCache.name, () => {
 					['a', '{"value":10}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
+		});
+
+		it('should set node at tree level with a given ttl', async () => {
+			const now = Date.now();
+			jest.spyOn(Date, 'now').mockReturnValue(now);
+
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a', 'b'],
+				{
+					value: 123,
+				},
+				1919,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:c:b:a',
+						JSON.stringify({
+							[TreeKeys.children]: {
+								b: {
+									[TreeKeys.value]: '{"value":123}',
+									[TreeKeys.deadline]: now + 1919000,
+								},
+							},
+						}),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should set node at tree level with a given ttl, but keeping current storage ttl when it is greater', async () => {
+			const now = Date.now();
+			jest.spyOn(Date, 'now').mockReturnValue(now);
+			ttlMap.set('a:c:b:a', 2909);
+
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a', 'b'],
+				{
+					value: 123,
+				},
+				1919,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:c:b:a',
+						JSON.stringify({
+							[TreeKeys.children]: {
+								b: {
+									[TreeKeys.value]: '{"value":123}',
+									[TreeKeys.deadline]: now + 1919000,
+								},
+							},
+						}),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+			expect(ttlMap.get('a:c:b:a')).toEqual(2909);
+		});
+
+		it('should set node at tree level with a given ttl, but replacing current storage ttl when it is lesser', async () => {
+			const now = Date.now();
+			jest.spyOn(Date, 'now').mockReturnValue(now);
+			ttlMap.set('a:c:b:a', 1679);
+
+			const result = await target.setNode(
+				['a', 'c', 'b', 'a', 'b'],
+				{
+					value: 123,
+				},
+				1919,
+			);
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:c:b:a',
+						JSON.stringify({
+							[TreeKeys.children]: {
+								b: {
+									[TreeKeys.value]: '{"value":123}',
+									[TreeKeys.deadline]: now + 1919000,
+								},
+							},
+						}),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}' },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+			expect(ttlMap.get('a:c:b:a')).toEqual(1919);
 		});
 
 		it('should not set node at the start of storage level when value is undefined', async () => {
