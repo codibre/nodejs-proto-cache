@@ -37,6 +37,8 @@ const defaultOptions: Required<
 	},
 };
 
+const MILLISECOND_SCALE = 1000;
+
 export class TreeKeyCache<T, R = string> {
 	private options: Required<KeyTreeCacheOptions<T, R>>;
 	constructor(
@@ -76,6 +78,7 @@ export class TreeKeyCache<T, R = string> {
 		const upTo = Math.min(keyLevelNodes - 1, length);
 		let nodeRef: TraversalItem<R> | undefined;
 		const treeRef: Tree<R> = {};
+		const now = Date.now();
 
 		if (upTo > 0) {
 			do {
@@ -103,8 +106,8 @@ export class TreeKeyCache<T, R = string> {
 				let tree: Tree<R> | undefined =
 					this.options.treeSerializer.deserialize(buffer);
 				while (nodeRef && nodeRef.level < length && tree) {
-					const { [TreeKeys.value]: v } = tree;
-					if (!isUndefined(v)) {
+					const { [TreeKeys.value]: v, [TreeKeys.deadline]: deadline } = tree;
+					if (!isUndefined(v) && this.isNotExpired(deadline, now)) {
 						yield this.getStep(v, nodeRef) as IterateStep<T>;
 					}
 					({ nodeRef, tree } = this.getNextTreeNode(
@@ -115,17 +118,29 @@ export class TreeKeyCache<T, R = string> {
 						treeRef,
 					));
 				}
-				if (tree && !isUndefined(tree[TreeKeys.value]) && nodeRef) {
-					nodeRef = createTraversalItem(
-						nodeRef.key,
-						nodeRef.level,
-						nodeRef,
-						treeRef,
-					);
-					yield this.getStep(tree[TreeKeys.value], nodeRef) as IterateStep<T>;
+				if (tree) {
+					const { [TreeKeys.value]: value, [TreeKeys.deadline]: deadline } =
+						tree;
+					if (
+						!isUndefined(value) &&
+						this.isNotExpired(deadline, now) &&
+						nodeRef
+					) {
+						nodeRef = createTraversalItem(
+							nodeRef.key,
+							nodeRef.level,
+							nodeRef,
+							treeRef,
+						);
+						yield this.getStep(tree[TreeKeys.value], nodeRef) as IterateStep<T>;
+					}
 				}
 			}
 		}
+	}
+
+	private isNotExpired(deadline: number | undefined, now: number) {
+		return !deadline || deadline > now;
 	}
 
 	/**
@@ -134,6 +149,8 @@ export class TreeKeyCache<T, R = string> {
 	 */
 	async getNode(path: string[]): Promise<Step<T> | undefined> {
 		const nodeRef = await this.getNodeRef(path);
+
+		if (!nodeRef) return;
 
 		if (nodeRef?.[valueSymbol]) {
 			return this.getStep(nodeRef[valueSymbol], nodeRef);
@@ -178,6 +195,7 @@ export class TreeKeyCache<T, R = string> {
 		let nodeRef: TraversalItem<R> | undefined;
 		let chainedKey: string | undefined;
 		const treeRef: Tree<R> = {};
+		const now = Date.now();
 
 		if (upTo > 0 && (!nodeRef || upTo > nodeRef.level)) {
 			do {
@@ -207,14 +225,22 @@ export class TreeKeyCache<T, R = string> {
 						treeRef,
 					));
 				}
-				if (tree && !isUndefined(tree[TreeKeys.value]) && nodeRef) {
-					nodeRef = createTraversalItem(
-						nodeRef.key,
-						nodeRef.level,
-						nodeRef,
-						tree,
-						tree[TreeKeys.value],
-					);
+				if (tree) {
+					const { [TreeKeys.value]: value, [TreeKeys.deadline]: deadline } =
+						tree;
+					if (
+						!isUndefined(value) &&
+						this.isNotExpired(deadline, now) &&
+						nodeRef
+					) {
+						nodeRef = createTraversalItem(
+							nodeRef.key,
+							nodeRef.level,
+							nodeRef,
+							tree,
+							tree[TreeKeys.value],
+						);
+					}
 				}
 			}
 		}
@@ -278,6 +304,8 @@ export class TreeKeyCache<T, R = string> {
 		let chainedKey: string | undefined;
 		let nodeRef: TraversalItem<R> | undefined;
 		let key = '';
+		const now = Date.now();
+
 		while (currentLevel < upTo) {
 			({ prevKeys, chainedKey, key } = getChainedKey(
 				path,
@@ -294,7 +322,7 @@ export class TreeKeyCache<T, R = string> {
 				nodeRef = createTraversalItem(key, currentLevel, nodeRef, tree);
 				const step = this.getStep(currentSerialized, nodeRef, createValue);
 				yield step;
-				await this.persistStep(step, currentSerialized, chainedKey);
+				await this.persistStep(step, currentSerialized, chainedKey, ttl);
 			} finally {
 				dontWait(release);
 			}
@@ -331,6 +359,8 @@ export class TreeKeyCache<T, R = string> {
 						currentSerialized,
 						changed,
 						currentTree,
+						ttl,
+						now,
 					);
 					key = getKey(path, currentLevel);
 					currentTree[TreeKeys.children] ??= {};
@@ -351,13 +381,11 @@ export class TreeKeyCache<T, R = string> {
 					currentSerialized,
 					changed,
 					currentTree,
+					ttl,
+					now,
 				);
 				if (changed) {
-					await this.storage.set(
-						chainedKey,
-						this.options.treeSerializer.serialize(rootTree),
-						ttl,
-					);
+					await this.persistTree(chainedKey, ttl, rootTree);
 				}
 			} finally {
 				dontWait(release);
@@ -370,12 +398,17 @@ export class TreeKeyCache<T, R = string> {
 		currentSerialized: R | undefined,
 		changed: boolean,
 		currentTree: Tree<R>,
+		ttl: number | undefined,
+		now: number,
 	) {
 		if (!isUndefined(step.value)) {
 			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
 				currentTree[TreeKeys.value] = serialized;
+				if (ttl) {
+					currentTree[TreeKeys.deadline] = now + ttl * MILLISECOND_SCALE;
+				}
 			}
 		}
 		return changed;
@@ -390,6 +423,7 @@ export class TreeKeyCache<T, R = string> {
 		tree: Tree<T>,
 		createValue: (node: ChainedObject) => T,
 		minLevelSemaphore = 0,
+		ttl?: number,
 	): AsyncIterable<FullSetItem<T>> {
 		const iterable = treePreOrderBreadthFirstSearch(tree);
 		const { keyLevelNodes } = this.options;
@@ -406,7 +440,12 @@ export class TreeKeyCache<T, R = string> {
 					: undefined;
 			try {
 				if (level === keyLevelNodes) {
-					yield* this.saveFullTreeValue(breadthNode, chainedKey, createValue);
+					yield* this.saveFullTreeValue(
+						breadthNode,
+						chainedKey,
+						createValue,
+						ttl,
+					);
 					continue;
 				}
 				const value = breadthNode[valueSymbol];
@@ -420,7 +459,7 @@ export class TreeKeyCache<T, R = string> {
 					value: newValue,
 				};
 				yield step;
-				await this.persistStep(step, currentSerialized, chainedKey);
+				await this.persistStep(step, currentSerialized, chainedKey, ttl);
 			} finally {
 				dontWait(release);
 			}
@@ -431,13 +470,31 @@ export class TreeKeyCache<T, R = string> {
 		step: FullSetItem<T> | Step<T>,
 		currentSerialized: R | undefined,
 		chainedKey: string,
+		ttl: number | undefined,
 	) {
 		if (!isUndefined(step.value)) {
 			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
-				await this.storage.set(chainedKey, serialized);
+				await this.storage.set(chainedKey, serialized, ttl);
 			}
 		}
+	}
+
+	private async persistTree(
+		chainedKey: string,
+		ttl: number | undefined,
+		tree: Tree<R>,
+	) {
+		let maxTtl: number | undefined;
+		if (ttl) {
+			const currentTtl = await this.storage.getCurrentTtl(chainedKey);
+			maxTtl = currentTtl === undefined ? ttl : Math.max(currentTtl, ttl);
+		}
+		await this.storage.set(
+			chainedKey,
+			this.options.treeSerializer.serialize(tree),
+			maxTtl,
+		);
 	}
 
 	private getFullSetItem(currentTree: Tree<R>, breadthNode: TraversalItem<T>) {
@@ -474,6 +531,7 @@ export class TreeKeyCache<T, R = string> {
 		breadthNode: TraversalItem<T>,
 		chainedKey: string,
 		createValue: (node: ChainedObject) => T | undefined,
+		ttl: number | undefined,
 	): AsyncIterable<FullSetItem<T>> {
 		const { [treeRefSymbol]: treeRef } = breadthNode;
 		const serializedTree = await this.storage.get(chainedKey);
@@ -516,10 +574,7 @@ export class TreeKeyCache<T, R = string> {
 		}
 
 		if (changed) {
-			await this.storage.set(
-				chainedKey,
-				this.options.treeSerializer.serialize(rootTree),
-			);
+			await this.persistTree(chainedKey, ttl, rootTree);
 		}
 	}
 }
