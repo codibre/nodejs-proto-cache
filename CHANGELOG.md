@@ -1,3 +1,10 @@
+# [0.7.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.6.0...v0.7.0) (2023-10-01)
+
+
+### Features
+
+* refactoring options for better extensions ([0aff0a5](https://github.com/codibre/nodejs-tree-key-cache/commit/0aff0a5856472d38949551f9e4fa5548a08c3021))
+
 # [0.6.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.5.0...v0.6.0) (2023-10-01)
 
 
