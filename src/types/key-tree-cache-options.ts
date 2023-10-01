@@ -1,10 +1,17 @@
+import { Tree } from './tree-type';
+
 export interface Semaphore {
 	acquire(key: string): Promise<() => Promise<unknown>>;
 }
 
-export interface KeyTreeCacheOptions<T> {
+export interface Serializer<A, B> {
+	serialize(a: A): B;
+	deserialize(b: B): A;
+}
+
+export interface KeyTreeCacheOptions<T, R = string>
+	extends Partial<Serializer<T, R>> {
 	keyLevelNodes: number;
-	serialize?(payload: T): string;
-	deserialize?(stringified: string): T;
+	treeSerializer?: Serializer<Tree<R>, R>;
 	semaphore?: Semaphore;
 }
