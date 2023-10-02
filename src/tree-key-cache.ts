@@ -21,6 +21,8 @@ import {
 	treeRefSymbol,
 	valueSymbol,
 } from './utils/graphs/tree-pre-order-traversal';
+import { EventEmitter } from 'events';
+import TypedEmitter from 'typed-emitter';
 
 const defaultSerializer = {
 	deserialize: JSON.parse.bind(JSON),
@@ -39,12 +41,21 @@ const defaultOptions: Required<
 
 const MILLISECOND_SCALE = 1000;
 
-export class TreeKeyCache<T, R = string> {
+type Events = {
+	deserializeError(error: unknown, type: 'value' | 'tree'): void;
+};
+
+export class TreeKeyCache<
+	T,
+	R = string,
+> extends (EventEmitter as new () => TypedEmitter<Events>) {
 	private options: Required<KeyTreeCacheOptions<T, R>>;
+
 	constructor(
 		private storage: KeyTreeCacheStorage<R>,
 		options: KeyTreeCacheOptions<T, R>,
 	) {
+		super();
 		this.options = {
 			...(defaultOptions as Required<KeyTreeCacheOptions<T, R>>),
 			...options,
@@ -63,9 +74,35 @@ export class TreeKeyCache<T, R = string> {
 			}
 			value = createValue(nodeRef);
 		} else {
-			value = this.options.valueSerializer.deserialize(buffer);
+			value = this.deserializeValue(buffer);
 		}
 		return { key: nodeRef.key, value, level: nodeRef.level, nodeRef };
+	}
+
+	private deserializeValue(serialized: R): T | undefined {
+		try {
+			return this.options.valueSerializer.deserialize(serialized);
+		} catch (error) {
+			this.emit('deserializeError', error, 'value');
+		}
+	}
+
+	private serializeValue(value: T) {
+		return this.options.valueSerializer.serialize(value);
+	}
+
+	private deserializeTree(
+		buffer: NonNullable<Awaited<R>>,
+	): Tree<R> | undefined {
+		try {
+			return this.options.treeSerializer.deserialize(buffer);
+		} catch (error) {
+			this.emit('deserializeError', error, 'tree');
+		}
+	}
+
+	private serializeTree(tree: Tree<R>): R {
+		return this.options.treeSerializer.serialize(tree);
 	}
 
 	/**
@@ -103,8 +140,7 @@ export class TreeKeyCache<T, R = string> {
 			const chainedKey = buildKey(nodeRef);
 			const buffer = await this.storage.get(chainedKey);
 			if (buffer) {
-				let tree: Tree<R> | undefined =
-					this.options.treeSerializer.deserialize(buffer);
+				let tree: Tree<R> | undefined = this.deserializeTree(buffer);
 				while (nodeRef && nodeRef.level < length && tree) {
 					const { [TreeKeys.value]: v, [TreeKeys.deadline]: deadline } = tree;
 					if (!isUndefined(v) && this.isNotExpired(deadline, now)) {
@@ -402,7 +438,7 @@ export class TreeKeyCache<T, R = string> {
 		now: number,
 	) {
 		if (!isUndefined(step.value)) {
-			const serialized = this.options.valueSerializer.serialize(step.value);
+			const serialized = this.serializeValue(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
 				currentTree[TreeKeys.value] = serialized;
@@ -490,11 +526,7 @@ export class TreeKeyCache<T, R = string> {
 			const currentTtl = await this.storage.getCurrentTtl(chainedKey);
 			maxTtl = currentTtl === undefined ? ttl : Math.max(currentTtl, ttl);
 		}
-		await this.storage.set(
-			chainedKey,
-			this.options.treeSerializer.serialize(tree),
-			maxTtl,
-		);
+		await this.storage.set(chainedKey, this.serializeTree(tree), maxTtl);
 	}
 
 	private getFullSetItem(currentTree: Tree<R>, breadthNode: TraversalItem<T>) {
@@ -502,7 +534,7 @@ export class TreeKeyCache<T, R = string> {
 		const baseLevel = breadthNode.level;
 		const node: FullSetItem<T> = {
 			oldValue: currentSerialized
-				? this.options.valueSerializer.deserialize(currentSerialized)
+				? this.deserializeValue(currentSerialized)
 				: undefined,
 			value: breadthNode[valueSymbol],
 			key: breadthNode.key,
