@@ -165,7 +165,7 @@ export class TreeKeyCache<
 						nodeRef = createTraversalItem(
 							nodeRef.key,
 							nodeRef.level,
-							nodeRef,
+							nodeRef.parentRef,
 							treeRef,
 						);
 						yield this.getStep(tree[TreeKeys.value], nodeRef) as IterateStep<T>;
@@ -272,7 +272,7 @@ export class TreeKeyCache<
 						nodeRef = createTraversalItem(
 							nodeRef.key,
 							nodeRef.level,
-							nodeRef,
+							nodeRef.parentRef,
 							tree,
 							tree[TreeKeys.value],
 						);
