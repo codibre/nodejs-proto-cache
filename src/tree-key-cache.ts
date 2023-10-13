@@ -29,9 +29,11 @@ const defaultSerializer = {
 	serialize: JSON.stringify.bind(JSON),
 };
 
-const defaultOptions: Required<
-	Omit<KeyTreeCacheOptions<unknown>, 'keyLevelNodes'>
-> = {
+type DefaultOptions<T, R> = Required<
+	Omit<KeyTreeCacheOptions<T, R>, 'keyLevelNodes' | 'memoizer'>
+>;
+
+const defaultOptions: DefaultOptions<unknown, unknown> = {
 	valueSerializer: defaultSerializer,
 	treeSerializer: defaultSerializer,
 	semaphore: {
@@ -45,11 +47,13 @@ type Events = {
 	deserializeError(error: unknown, type: 'value' | 'tree'): void;
 };
 
+type MergedOptions<T, R> = DefaultOptions<T, R> & KeyTreeCacheOptions<T, R>;
+
 export class TreeKeyCache<
 	T,
 	R = string,
 > extends (EventEmitter as new () => TypedEmitter<Events>) {
-	private options: Required<KeyTreeCacheOptions<T, R>>;
+	private options: MergedOptions<T, R>;
 
 	constructor(
 		private storage: KeyTreeCacheStorage<R>,
@@ -57,7 +61,7 @@ export class TreeKeyCache<
 	) {
 		super();
 		this.options = {
-			...(defaultOptions as Required<KeyTreeCacheOptions<T, R>>),
+			...(defaultOptions as MergedOptions<T, R>),
 			...options,
 		};
 	}
@@ -126,11 +130,15 @@ export class TreeKeyCache<
 					treeRef,
 				);
 				const chainedKey = buildKey(nodeRef);
-				const buffer = await this.storage.get(chainedKey);
-				if (!buffer) {
-					continue;
+				let step: Step<T> | undefined = this.options.memoizer?.get(chainedKey);
+				if (!step) {
+					const buffer = await this.storage.get(chainedKey);
+					if (!buffer) {
+						continue;
+					}
+					step = this.getStep(buffer, nodeRef);
+					this.options.memoizer?.set(chainedKey, step);
 				}
-				const step = this.getStep(buffer, nodeRef);
 				yield step as IterateStep<T>;
 			} while (nodeRef.level < upTo);
 		}
@@ -138,9 +146,17 @@ export class TreeKeyCache<
 		if (nodeRef && length > nodeRef.level) {
 			nodeRef = this.getNextStorageNode(path, nodeRef.level, nodeRef, treeRef);
 			const chainedKey = buildKey(nodeRef);
-			const buffer = await this.storage.get(chainedKey);
-			if (buffer) {
-				let tree: Tree<R> | undefined = this.deserializeTree(buffer);
+			let tree: Tree<R> | undefined = this.options.memoizer?.get(chainedKey);
+			if (!tree) {
+				const buffer = await this.storage.get(chainedKey);
+				if (buffer) {
+					tree = this.deserializeTree(buffer);
+					if (tree) {
+						this.options.memoizer?.set(chainedKey, tree);
+					}
+				}
+			}
+			if (tree) {
 				while (nodeRef && nodeRef.level < length && tree) {
 					const { [TreeKeys.value]: v, [TreeKeys.deadline]: deadline } = tree;
 					if (!isUndefined(v) && this.isNotExpired(deadline, now)) {

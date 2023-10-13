@@ -244,6 +244,7 @@ describe(TreeKeyCache.name, () => {
 				},
 			]);
 		});
+
 		it('should return an iterable for the values stored in partial keys and in the tree-value that are not expired yet', async () => {
 			const result: Step<{ value: number }>[] = [];
 			const now = 292929;
@@ -296,6 +297,74 @@ describe(TreeKeyCache.name, () => {
 					nodeRef: expect.any(Object),
 				},
 			]);
+		});
+
+		it('should memoize each redis parsed read, and use it in subsequent reads, when a memoizer is set', async () => {
+			const memoizer = (target['options'].memoizer = new Map());
+			jest.spyOn(memoizer, 'get');
+			jest.spyOn(memoizer, 'set');
+
+			const result1: Step<{ value: number }>[] = [];
+			const result2: Step<{ value: number }>[] = [];
+
+			const iterable1 = target.iteratePath(['a', 'b', 'c', 'd', 'e']);
+			for await (const item of iterable1) {
+				result1.push(item);
+			}
+			const iterable2 = target.iteratePath(['a', 'b', 'c', 'd', 'e']);
+			for await (const item of iterable2) {
+				result2.push(item);
+			}
+
+			expect(result1).toEqual(result2);
+			expect(result1).toEqual([
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 10 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 30 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: 50 },
+					nodeRef: expect.any(Object),
+				},
+			]);
+			expect(memoizer.get).toHaveCallsLike(
+				['a'],
+				['a:b'],
+				['a:b:c'],
+				['a:b:c:d'],
+				['a'],
+				['a:b'],
+				['a:b:c'],
+				['a:b:c:d'],
+			);
+			expect(memoizer.set).toHaveCallsLike(
+				['a', expect.anything()],
+				['a:b', expect.anything()],
+				['a:b:c', expect.anything()],
+				['a:b:c:d', expect.anything()],
+			);
 		});
 	});
 
