@@ -1,3 +1,10 @@
+## [0.9.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.9.0...v0.9.1) (2023-10-13)
+
+
+### Bug Fixes
+
+* fixing buildKey for inner tree nodes ([76f89fb](https://github.com/codibre/nodejs-tree-key-cache/commit/76f89fb5ea3923bac2fb11ab22a0e3a54714cc41))
+
 # [0.9.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.8.1...v0.9.0) (2023-10-02)
 
 
