@@ -1,3 +1,10 @@
+# [0.10.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.9.1...v0.10.0) (2023-10-17)
+
+
+### Features
+
+* creating memoizer option ([#9](https://github.com/codibre/nodejs-tree-key-cache/issues/9)) ([b18122c](https://github.com/codibre/nodejs-tree-key-cache/commit/b18122c162057e65b19cc1cbaa24fd7ad728552c))
+
 ## [0.9.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.9.0...v0.9.1) (2023-10-13)
 
 
