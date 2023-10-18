@@ -26,11 +26,8 @@ export interface IterateStep<T> extends Step<T> {
 	value: T;
 }
 
-export interface FullSetItem<T> {
-	value: T | undefined;
+export interface FullSetItem<T> extends Step<T> {
 	oldValue: T | undefined;
-	key: string;
-	level: number;
 }
 
 export interface ChainedObject {
