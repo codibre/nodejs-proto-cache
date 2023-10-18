@@ -1,3 +1,10 @@
+# [0.11.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.10.0...v0.11.0) (2023-10-18)
+
+
+### Features
+
+* supporting ttl function ([#10](https://github.com/codibre/nodejs-tree-key-cache/issues/10)) ([cc4c36d](https://github.com/codibre/nodejs-tree-key-cache/commit/cc4c36d39bbbfe964ccf9d0d19d823de34a02f14))
+
 # [0.10.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.9.1...v0.10.0) (2023-10-17)
 
 
