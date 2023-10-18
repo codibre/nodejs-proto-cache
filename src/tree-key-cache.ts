@@ -6,6 +6,7 @@ import {
 	KeyTreeCacheOptions,
 	KeyTreeCacheStorage,
 	Step,
+	StepTtl,
 	Tree,
 	TreeKeys,
 } from './types';
@@ -216,7 +217,7 @@ export class TreeKeyCache<
 	async setNode(
 		path: string[],
 		value: T | (() => Promise<T>),
-		ttl?: number,
+		ttl?: StepTtl<T>,
 	): Promise<void> {
 		if (isUndefined(value)) {
 			return;
@@ -343,7 +344,7 @@ export class TreeKeyCache<
 	async *deepTreeSet(
 		path: string[],
 		createValue: (node: ChainedObject) => T | undefined,
-		ttl?: number,
+		ttl?: StepTtl<T>,
 		previousKeys: string[] = [],
 		minLevelSemaphore = 0,
 	): AsyncIterable<Step<T>> {
@@ -356,6 +357,7 @@ export class TreeKeyCache<
 		let chainedKey: string | undefined;
 		let nodeRef: TraversalItem<R> | undefined;
 		let key = '';
+		let maxTtl: number | undefined;
 		const now = Date.now();
 
 		while (currentLevel < upTo) {
@@ -374,7 +376,13 @@ export class TreeKeyCache<
 				nodeRef = createTraversalItem(key, currentLevel, nodeRef, tree);
 				const step = this.getStep(currentSerialized, nodeRef, createValue);
 				yield step;
-				await this.persistStep(step, currentSerialized, chainedKey, ttl);
+				maxTtl = await this.persistStep(
+					step,
+					currentSerialized,
+					chainedKey,
+					ttl,
+					maxTtl,
+				);
 			} finally {
 				dontWait(release);
 			}
@@ -406,14 +414,17 @@ export class TreeKeyCache<
 					nodeRef = createTraversalItem(key, currentLevel, nodeRef, tree);
 					const step = this.getStep(currentSerialized, nodeRef, createValue);
 					yield step;
-					changed = this.enrichTree(
+					let currentTtl: number | undefined;
+					const enrichResult = this.enrichTree(
 						step,
 						currentSerialized,
-						changed,
 						currentTree,
-						ttl,
+						currentTtl,
 						now,
+						maxTtl,
 					);
+					changed = changed || enrichResult.changed;
+					maxTtl = enrichResult.maxTtl;
 					key = getKey(path, currentLevel);
 					currentTree[TreeKeys.children] ??= {};
 					let nextTree = currentTree[TreeKeys.children][key];
@@ -428,16 +439,20 @@ export class TreeKeyCache<
 				nodeRef = createTraversalItem(key, currentLevel, nodeRef, tree);
 				const step = this.getStep(currentSerialized, nodeRef, createValue);
 				yield step;
-				changed = this.enrichTree(
+				let currentTtl: number | undefined;
+				({ currentTtl, maxTtl } = this.getTtl(ttl, step, maxTtl));
+				const enrichResult = this.enrichTree(
 					step,
 					currentSerialized,
-					changed,
 					currentTree,
-					ttl,
+					currentTtl,
 					now,
+					maxTtl,
 				);
+				changed = changed || enrichResult.changed;
+				maxTtl = enrichResult.maxTtl;
 				if (changed) {
-					await this.persistTree(chainedKey, ttl, rootTree);
+					await this.persistTree(chainedKey, maxTtl, rootTree);
 				}
 			} finally {
 				dontWait(release);
@@ -445,25 +460,40 @@ export class TreeKeyCache<
 		}
 	}
 
+	private getTtl(
+		ttl: StepTtl<T> | undefined,
+		step: Step<T>,
+		maxTtl: number | undefined,
+	) {
+		const currentTtl = typeof ttl === 'function' ? ttl(step) : ttl;
+		if (currentTtl && (!maxTtl || currentTtl > maxTtl)) {
+			maxTtl = currentTtl;
+		}
+		return { currentTtl, maxTtl };
+	}
+
 	private enrichTree(
 		step: Step<T>,
 		currentSerialized: R | undefined,
-		changed: boolean,
 		currentTree: Tree<R>,
-		ttl: number | undefined,
+		ttl: StepTtl<T> | undefined,
 		now: number,
+		maxTtl: number | undefined,
 	) {
+		let changed = false;
 		if (!isUndefined(step.value)) {
 			const serialized = this.serializeValue(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;
+				let currentTtl: number | undefined;
+				({ currentTtl, maxTtl } = this.getTtl(ttl, step, maxTtl));
 				currentTree[TreeKeys.value] = serialized;
-				if (ttl) {
-					currentTree[TreeKeys.deadline] = now + ttl * MILLISECOND_SCALE;
+				if (currentTtl) {
+					currentTree[TreeKeys.deadline] = now + currentTtl * MILLISECOND_SCALE;
 				}
 			}
 		}
-		return changed;
+		return { changed, maxTtl };
 	}
 
 	/**
@@ -475,7 +505,7 @@ export class TreeKeyCache<
 		tree: Tree<T>,
 		createValue: (node: ChainedObject) => T,
 		minLevelSemaphore = 0,
-		ttl?: number,
+		ttl?: StepTtl<T>,
 	): AsyncIterable<FullSetItem<T>> {
 		const iterable = treePreOrderBreadthFirstSearch(tree);
 		const { keyLevelNodes } = this.options;
@@ -511,7 +541,13 @@ export class TreeKeyCache<
 					value: newValue,
 				};
 				yield step;
-				await this.persistStep(step, currentSerialized, chainedKey, ttl);
+				await this.persistStep(
+					step,
+					currentSerialized,
+					chainedKey,
+					ttl,
+					undefined,
+				);
 			} finally {
 				dontWait(release);
 			}
@@ -522,14 +558,19 @@ export class TreeKeyCache<
 		step: FullSetItem<T> | Step<T>,
 		currentSerialized: R | undefined,
 		chainedKey: string,
-		ttl: number | undefined,
+		ttl: StepTtl<T> | undefined,
+		maxTtl: number | undefined,
 	) {
 		if (!isUndefined(step.value)) {
 			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
-				await this.storage.set(chainedKey, serialized, ttl);
+				let currentTtl: number | undefined;
+				({ currentTtl, maxTtl } = this.getTtl(ttl, step, maxTtl));
+				await this.storage.set(chainedKey, serialized, currentTtl);
 			}
 		}
+
+		return maxTtl;
 	}
 
 	private async persistTree(
@@ -547,23 +588,28 @@ export class TreeKeyCache<
 
 	private getFullSetItem(currentTree: Tree<R>, breadthNode: TraversalItem<T>) {
 		const currentSerialized = currentTree?.[TreeKeys.value];
-		const baseLevel = breadthNode.level;
+		const { level, key, parentRef } = breadthNode;
 		const node: FullSetItem<T> = {
 			oldValue: currentSerialized
 				? this.deserializeValue(currentSerialized)
 				: undefined,
 			value: breadthNode[valueSymbol],
-			key: breadthNode.key,
-			level: baseLevel,
+			key,
+			level,
+			nodeRef: {
+				key,
+				level,
+				parentRef,
+			},
 		};
 		return { node, currentSerialized };
 	}
 
 	private checkFullSetItemChange(
 		item: { node: FullSetItem<T>; currentSerialized: R | undefined },
-		changed: boolean,
 		currentTree: Tree<R>,
 	) {
+		let changed = false;
 		const { node, currentSerialized } = item;
 		if (node.value !== undefined) {
 			const serialized = this.options.valueSerializer.serialize(node.value);
@@ -579,7 +625,7 @@ export class TreeKeyCache<
 		breadthNode: TraversalItem<T>,
 		chainedKey: string,
 		createValue: (node: ChainedObject) => T | undefined,
-		ttl: number | undefined,
+		ttl: StepTtl<T> | undefined,
 	): AsyncIterable<FullSetItem<T>> {
 		const { [treeRefSymbol]: treeRef } = breadthNode;
 		const serializedTree = await this.storage.get(chainedKey);
@@ -591,7 +637,8 @@ export class TreeKeyCache<
 		let changed = false;
 		const rootItem = this.getFullSetItem(currentTree, breadthNode);
 		yield rootItem.node;
-		changed = this.checkFullSetItemChange(rootItem, changed, currentTree);
+		changed = this.checkFullSetItemChange(rootItem, currentTree) || changed;
+		let maxTtl: number | undefined;
 		for (const depthNode of treePreOrderDepthFirstSearch(treeRef)) {
 			const { level, key } = depthNode;
 			if (stack.length < level) {
@@ -618,11 +665,15 @@ export class TreeKeyCache<
 			}
 			const item = this.getFullSetItem(currentTree, depthNode);
 			yield item.node;
-			changed = this.checkFullSetItemChange(item, changed, currentTree);
+			const itemChanged = this.checkFullSetItemChange(item, currentTree);
+			if (itemChanged) {
+				({ maxTtl } = this.getTtl(ttl, item.node, maxTtl));
+			}
+			changed = itemChanged || changed;
 		}
 
 		if (changed) {
-			await this.persistTree(chainedKey, ttl, rootTree);
+			await this.persistTree(chainedKey, maxTtl, rootTree);
 		}
 	}
 }
