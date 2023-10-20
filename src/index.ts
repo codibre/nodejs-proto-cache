@@ -1,3 +1,8 @@
 export * from './types';
 export * from './tree-key-cache';
-export * from './utils/graphs/build-key';
+export {
+	buildKey,
+	treePreOrderBreadthFirstSearch,
+	treePreOrderDepthFirstSearch,
+} from './utils/graphs';
+export { deserializeWholeTree, EmptyTree, TreeError } from './utils';
