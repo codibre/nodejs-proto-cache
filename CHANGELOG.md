@@ -1,3 +1,10 @@
+# [0.12.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.11.0...v0.12.0) (2023-10-20)
+
+
+### Features
+
+* implementing deserialize-whole-tree ([#11](https://github.com/codibre/nodejs-tree-key-cache/issues/11)) ([1d21b33](https://github.com/codibre/nodejs-tree-key-cache/commit/1d21b331a2647d2861a342333c8062d7713af484))
+
 # [0.11.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.10.0...v0.11.0) (2023-10-18)
 
 
