@@ -10,6 +10,14 @@ export class EmptyTree extends Error {
 	}
 }
 
+/**
+ * Given a in memory data of a tree, deserializeWholeTree will perform a tree deserialization and then the deserialization of each value on the tree, returning the completly deserialized tree.
+ * This is useful, for example, if you want to create a function to print a tree value for debug purposes, for example.
+ * @param data the serialized data of a tree
+ * @param treeSerializer the tree serializer
+ * @param valueSerializer the value serializer
+ * @returns the completely deserialized tree
+ */
 export function deserializeWholeTree<T, R = string>(
 	data: R,
 	treeSerializer: Serializer<Tree<R>, R>,
