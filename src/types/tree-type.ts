@@ -1,7 +1,10 @@
-export type KeyType = string | number | symbol;
+export type KeyType = string;
 export type TreeChildren<T> = {
 	[t in KeyType]: Tree<T>;
 };
+export type AsyncTreeChildren<T> = AsyncIterable<
+	[KeyType, AsyncTree<T> | Tree<T>]
+>;
 
 export enum TreeKeys {
 	children = 'c',
@@ -9,11 +12,21 @@ export enum TreeKeys {
 	deadline = 'd',
 }
 
-export interface Tree<T> {
-	[TreeKeys.children]?: TreeChildren<T>;
+export interface BaseTree<T> {
 	[TreeKeys.value]?: T;
+	[TreeKeys.children]?: object;
+}
+
+export interface AsyncTree<T> extends BaseTree<T> {
+	[TreeKeys.children]?: () => AsyncTreeChildren<T>;
+}
+
+export interface Tree<T> extends BaseTree<T> {
+	[TreeKeys.children]?: TreeChildren<T>;
 	[TreeKeys.deadline]?: number;
 }
+
+export type StorageTree<T> = Tree<T> | AsyncTree<T>;
 
 export interface Step<T> {
 	value: T | undefined;

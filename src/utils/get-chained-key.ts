@@ -1,8 +1,11 @@
 import { getKey } from './get-key';
 
-export function getChainedKey(keys: string[], index: number, prevKeys: string) {
+export function getChainedKey(
+	keys: string[],
+	index: number,
+	chainedKey: string | undefined,
+) {
 	const key = getKey(keys, index);
-	const chainedKey = prevKeys ? `${prevKeys}:${key}` : key;
-	prevKeys = chainedKey;
-	return { chainedKey, key, prevKeys };
+	chainedKey = chainedKey ? `${chainedKey}:${key}` : key;
+	return { chainedKey, key };
 }

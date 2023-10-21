@@ -1,6 +1,6 @@
 import { Serializer, Tree, TreeKeys } from '../types';
 import { treePreOrderDepthFirstSearch } from './graphs';
-import { valueSymbol } from './graphs/tree-pre-order-traversal';
+import { valueSymbol } from './graphs/graph-types';
 import { isUndefined } from './is-undefined';
 
 export class TreeError extends Error {}
@@ -39,7 +39,7 @@ export function deserializeWholeTree<T, R = string>(
 	const stack: Tree<T>[] = [newTree];
 	let currentLevel = 0;
 
-	for (const node of treePreOrderDepthFirstSearch(tree)) {
+	for (const node of treePreOrderDepthFirstSearch(tree, undefined)) {
 		currentLevel++;
 		if (currentLevel < node.level) {
 			throw new TreeError('Path lost');
