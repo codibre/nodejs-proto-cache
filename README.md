@@ -215,7 +215,7 @@ We also have implemented two custom serializers for some really popular binary f
 This is a really compact binary format that offers a partially easy payload evolution, as you need to inform older payload versions to do so. Use this to achieve one of the maximum storage economy possible;
 
 * [@tree-key-cache/protobuf](https://www.npmjs.com/package/@tree-key-cache/protobuf): A serializer that targets protobuf data to be saved on the storage.
-This is also a compact format, not so much compared to avro during our own tests, but it offers a more flexible payload evolution, as the retro-compatibility is automatically when evolving the proto file.
+This is also a compact format, not so much compared to avro during our own tests, but it offers a more flexible payload evolution, as the retro-compatibility is automatic when evolving the proto file.
 
 ## License
 
