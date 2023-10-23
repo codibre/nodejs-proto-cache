@@ -178,7 +178,7 @@ for await (const step of iterable) {
 You can also do that at a **key level node**, but you'll need to have the method **getChildren** implemented on your storage. This method must me capable of return every child key for a given key with not a tree persisted.
 Optionally, you can also implement the method **registerChild**, that will be called every time a child for a given key is set. This is useful to keep track of the children being included for a given node.
 
-Likewise, you an perform a **breadth first search** using the method **preOrderDepthFirstSearch** with the same conditions.
+Likewise, you can perform a **breadth first search** using the method **preOrderBreadthFirstSearch** with the same conditions.
 
 The exclusion of no longer existing children references must be, for now, be managed by the storage implementation itself.
 
