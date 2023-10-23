@@ -1323,7 +1323,7 @@ describe(TreeKeyCache.name, () => {
 			expect(thrownError).toBeInstanceOf(Error);
 		});
 
-		it('should return every node of the storage when preOrderDepthFirstSearch is called with no parameters', async () => {
+		it('should return every node of the storage when preOrderBreadthFirstSearch is called with no parameters', async () => {
 			target['storage'].getChildren = async function* (
 				start: string | undefined,
 			) {
