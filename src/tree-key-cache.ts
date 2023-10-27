@@ -10,29 +10,32 @@ import {
 	Tree,
 	TreeKeys,
 } from './types';
-import { dontWait, getKey, isUndefined } from './utils';
+import { constant, dontWait, getKey, isUndefined } from './utils';
 import {
 	createTraversalItem,
 	treePreOrderBreadthFirstSearch,
 	treePreOrderDepthFirstSearch,
 } from './utils/graphs';
-import { buildKey } from './utils/graphs/build-key';
+import { buildKey, splitKey } from './utils/graphs/build-key';
 import {
+	StorageTraversalItem,
 	TraversalItem,
 	treeRefSymbol,
 	valueSymbol,
-} from './utils/graphs/tree-pre-order-traversal';
+} from './utils/graphs/graph-types';
 import { EventEmitter } from 'events';
 import TypedEmitter from 'typed-emitter';
+import {
+	asyncTreePreOrderBreadthFirstSearch,
+	asyncTreePreOrderDepthFirstSearch,
+} from './utils/graphs/async';
+import { DefaultOptions, MergedOptions } from './options-types';
+import { AsyncTreeRef } from './async-tree-ref';
 
 const defaultSerializer = {
 	deserialize: JSON.parse.bind(JSON),
 	serialize: JSON.stringify.bind(JSON),
 };
-
-type DefaultOptions<T, R> = Required<
-	Omit<KeyTreeCacheOptions<T, R>, 'keyLevelNodes' | 'memoizer'>
->;
 
 const defaultOptions: DefaultOptions<unknown, unknown> = {
 	valueSerializer: defaultSerializer,
@@ -47,8 +50,6 @@ const MILLISECOND_SCALE = 1000;
 type Events = {
 	deserializeError(error: unknown, type: 'value' | 'tree'): void;
 };
-
-type MergedOptions<T, R> = DefaultOptions<T, R> & KeyTreeCacheOptions<T, R>;
 
 export class TreeKeyCache<
 	T,
@@ -69,15 +70,12 @@ export class TreeKeyCache<
 
 	private getStep(
 		buffer: R | undefined,
-		nodeRef: TraversalItem<unknown>,
+		nodeRef: StorageTraversalItem<unknown>,
 		createValue?: (node: ChainedObject) => T | undefined,
 	): Step<T> {
 		let value: T | undefined;
 		if (!buffer) {
-			if (!createValue) {
-				throw new TypeError('createValue not informed!');
-			}
-			value = createValue(nodeRef);
+			value = createValue?.(nodeRef);
 		} else {
 			value = this.deserializeValue(buffer);
 		}
@@ -343,7 +341,7 @@ export class TreeKeyCache<
 	 */
 	async *deepTreeSet(
 		path: string[],
-		createValue: (node: ChainedObject) => T | undefined,
+		createValue?: (node: ChainedObject) => T | undefined,
 		ttl?: StepTtl<T>,
 		previousKeys: string[] = [],
 		minLevelSemaphore = 0,
@@ -353,19 +351,17 @@ export class TreeKeyCache<
 		const tree: Tree<R> = {};
 		let upTo = Math.min(keyLevelNodes - 1, length);
 		let currentLevel = previousKeys.length;
-		let prevKeys = previousKeys.join(':');
-		let chainedKey: string | undefined;
+		let chainedKey =
+			previousKeys.length > 0 ? previousKeys.join(':') : undefined;
 		let nodeRef: TraversalItem<R> | undefined;
 		let key = '';
 		let maxTtl: number | undefined;
 		const now = Date.now();
 
 		while (currentLevel < upTo) {
-			({ prevKeys, chainedKey, key } = getChainedKey(
-				path,
-				currentLevel,
-				prevKeys,
-			));
+			const previousChainedKey = chainedKey;
+			({ chainedKey, key } = getChainedKey(path, currentLevel, chainedKey));
+			await this.storage.registerChild?.(previousChainedKey, key);
 			const release =
 				minLevelSemaphore <= currentLevel
 					? await this.options.semaphore.acquire(chainedKey)
@@ -391,11 +387,7 @@ export class TreeKeyCache<
 			if (!chainedKey) {
 				throw new TypeError('Non consistent storage');
 			}
-			({ prevKeys, chainedKey, key } = getChainedKey(
-				path,
-				currentLevel,
-				prevKeys,
-			));
+			({ chainedKey, key } = getChainedKey(path, currentLevel, chainedKey));
 			currentLevel++;
 			const release =
 				minLevelSemaphore <= currentLevel
@@ -507,7 +499,7 @@ export class TreeKeyCache<
 		minLevelSemaphore = 0,
 		ttl?: StepTtl<T>,
 	): AsyncIterable<FullSetItem<T>> {
-		const iterable = treePreOrderBreadthFirstSearch(tree);
+		const iterable = treePreOrderBreadthFirstSearch(tree, undefined);
 		const { keyLevelNodes } = this.options;
 		let currentSerialized: R | undefined;
 		for (const breadthNode of iterable) {
@@ -530,6 +522,7 @@ export class TreeKeyCache<
 					);
 					continue;
 				}
+				await this.registerKeyLevelChildren(breadthNode, chainedKey);
 				const value = breadthNode[valueSymbol];
 				currentSerialized = await this.storage.get(chainedKey);
 				const old = this.getStep(currentSerialized, breadthNode, createValue);
@@ -550,6 +543,22 @@ export class TreeKeyCache<
 				);
 			} finally {
 				dontWait(release);
+			}
+		}
+	}
+
+	private async registerKeyLevelChildren(
+		breadthNode: TraversalItem<T>,
+		chainedKey: string,
+	) {
+		if (this.storage.registerChild) {
+			const children = breadthNode[treeRefSymbol][TreeKeys.children];
+			if (children) {
+				for (const key in children) {
+					if (key in children) {
+						await this.storage.registerChild(chainedKey, key);
+					}
+				}
 			}
 		}
 	}
@@ -639,7 +648,10 @@ export class TreeKeyCache<
 		yield rootItem.node;
 		changed = this.checkFullSetItemChange(rootItem, currentTree) || changed;
 		let maxTtl: number | undefined;
-		for (const depthNode of treePreOrderDepthFirstSearch(treeRef)) {
+		for (const depthNode of treePreOrderDepthFirstSearch(
+			treeRef,
+			breadthNode,
+		)) {
 			const { level, key } = depthNode;
 			if (stack.length < level) {
 				if (!currentTree) {
@@ -674,6 +686,100 @@ export class TreeKeyCache<
 
 		if (changed) {
 			await this.persistTree(chainedKey, maxTtl, rootTree);
+		}
+	}
+
+	async *preOrderBreadthFirstSearch(basePath?: string[]) {
+		const nodeRef = basePath ? await this.getNodeRef(basePath) : undefined;
+		if (!basePath || nodeRef) {
+			if (nodeRef) {
+				yield this.getStep(nodeRef[valueSymbol], nodeRef);
+			}
+			const iterable =
+				nodeRef && this.options.keyLevelNodes <= (basePath as string[]).length
+					? treePreOrderBreadthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
+					: asyncTreePreOrderBreadthFirstSearch(
+							new AsyncTreeRef(nodeRef, this.storage, this.options),
+							nodeRef,
+					  );
+			for await (const item of iterable) {
+				yield this.getStep(item[valueSymbol], item);
+			}
+		}
+	}
+
+	async *preOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
+		const nodeRef = basePath ? await this.getNodeRef(basePath) : undefined;
+		if (!basePath || nodeRef) {
+			if (nodeRef) {
+				yield this.getStep(nodeRef[valueSymbol], nodeRef);
+			}
+			const iterable =
+				nodeRef && this.options.keyLevelNodes <= (basePath as string[]).length
+					? treePreOrderDepthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
+					: asyncTreePreOrderDepthFirstSearch(
+							new AsyncTreeRef(nodeRef, this.storage, this.options),
+							nodeRef,
+					  );
+			for await (const item of iterable) {
+				yield this.getStep(item[valueSymbol], item);
+			}
+		}
+	}
+
+	async *reprocessAllKeyLevelChildren(partition = 1) {
+		if (!this.storage.randomIterate || !this.storage.registerChild) {
+			throw new TypeError(
+				'Storage implementation does not support key level children reprocessing',
+			);
+		}
+		await this.storage.clearAllChildrenRegistry?.();
+		const promises: Array<Promise<unknown>> = [];
+		for await (const key of this.storage.randomIterate()) {
+			const path = splitKey(key);
+			let chainedKey: string | undefined;
+			const processed: string[] = [];
+			for (const partialKey of path) {
+				promises.push(
+					this.storage
+						.registerChild(chainedKey, partialKey)
+						.then(constant([chainedKey, partialKey])),
+				);
+				processed.push(partialKey);
+				chainedKey = buildKey(processed);
+				if (promises.length >= partition) {
+					yield Promise.all(promises);
+					promises.length = 0;
+				}
+			}
+		}
+		if (promises.length > 0) {
+			yield Promise.all(promises);
+		}
+	}
+
+	/**
+	 * Iterates randomly over the storage
+	 * @param pattern A pattern to filter the desired keys. Notice that the value this pattern will support is deeply connected to the storage implementation used
+	 */
+	async *randomIterate(pattern?: string) {
+		if (!this.storage.randomIterate) {
+			throw new TypeError(
+				'Storage implementation does not support random iteration',
+			);
+		}
+		for await (const key of this.storage.randomIterate(pattern)) {
+			const path = splitKey(key);
+			const nodeRef = await this.getNodeRef(path);
+			if (nodeRef) {
+				const iterable =
+					nodeRef.level >= this.options.keyLevelNodes
+						? treePreOrderBreadthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
+						: [nodeRef];
+				for (const item of iterable) {
+					yield this.getStep(item[valueSymbol], item);
+				}
+			}
 		}
 	}
 }

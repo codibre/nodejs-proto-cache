@@ -4,32 +4,35 @@ interface Node<T> {
 	next?: Node<T>;
 }
 
-export function getQueue<T>() {
-	const queue: Node<T> = {};
-	let size = 0;
-	return {
-		get length() {
-			return size;
-		},
-		push(value: T) {
-			const node = { value };
-			if (queue.last) {
-				queue.last = queue.last.next = node;
-			} else {
-				queue.last = queue.next = node;
+export class Queue<T> {
+	private next: Node<T> | undefined;
+	private last: Node<T> | undefined;
+	private size = 0;
+
+	get length() {
+		return this.size;
+	}
+	push(value: T) {
+		const node = { value };
+		if (this.last) {
+			this.last = this.last.next = node;
+		} else {
+			this.last = this.next = node;
+		}
+		this.size++;
+	}
+	peek() {
+		return this.next?.value;
+	}
+	pop() {
+		if (this.next) {
+			const { value } = this.next;
+			this.next = this.next.next;
+			if (!this.next) {
+				this.last = undefined;
 			}
-			size++;
-		},
-		pop() {
-			if (queue.next) {
-				const { value } = queue.next;
-				queue.next = queue.next.next;
-				if (!queue.next) {
-					queue.last = undefined;
-				}
-				size--;
-				return value;
-			}
-		},
-	};
+			this.size--;
+			return value;
+		}
+	}
 }

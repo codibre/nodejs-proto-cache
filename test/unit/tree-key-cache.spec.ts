@@ -1,5 +1,13 @@
-import { Step, Tree, TreeKeyCache, TreeKeys } from '../../src';
+import { Step, Tree, TreeKeyCache, TreeKeys, buildKey } from '../../src';
 import * as dontWaitLib from 'src/utils/dont-wait';
+
+async function toArray<T>(iterable: AsyncIterable<T>) {
+	const result: T[] = [];
+	for await (const item of iterable) {
+		result.push(item);
+	}
+	return result;
+}
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -1199,6 +1207,384 @@ describe(TreeKeyCache.name, () => {
 				['a:b1:c1:d1'],
 			);
 			expect(release).toHaveCallsLike([], [], [], []);
+		});
+	});
+
+	describe(proto.preOrderDepthFirstSearch.name, () => {
+		it('should throw an error when the method is called with a key level path but no getChildren is implemented on the storage', async () => {
+			let thrownError: any;
+
+			try {
+				await toArray(target.preOrderDepthFirstSearch());
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+		});
+
+		it('should return every node of the storage when preOrderDepthFirstSearch is called with no parameters', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+
+			const result = await toArray(target.preOrderDepthFirstSearch());
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'a1', level: 1, value: 'a', chainedKey: 'a1' },
+				{ key: 'b1', level: 2, value: undefined, chainedKey: 'a1:b1' },
+				{ key: 'c1', level: 3, value: 'b', chainedKey: 'a1:b1:c1' },
+				{ key: 'a', level: 1, value: { value: 10 }, chainedKey: 'a' },
+				{ key: 'b', level: 2, value: { value: 20 }, chainedKey: 'a:b' },
+				{ key: 'c', level: 3, value: { value: 30 }, chainedKey: 'a:b:c' },
+				{ key: 'd', level: 4, value: { value: 40 }, chainedKey: 'a:b:c:d' },
+				{ key: 'e', level: 5, value: { value: 50 }, chainedKey: 'a:b:c:d:e' },
+				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
+			]);
+		});
+
+		it('should return every node that matches with the given path', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+
+			const result = await toArray(target.preOrderDepthFirstSearch(['a', 'b']));
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'b', level: 2, value: { value: 20 }, chainedKey: 'a:b' },
+				{ key: 'c', level: 3, value: { value: 30 }, chainedKey: 'a:b:c' },
+				{ key: 'd', level: 4, value: { value: 40 }, chainedKey: 'a:b:c:d' },
+				{ key: 'e', level: 5, value: { value: 50 }, chainedKey: 'a:b:c:d:e' },
+				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
+			]);
+		});
+	});
+
+	describe(proto.preOrderBreadthFirstSearch.name, () => {
+		it('should throw an error when the method is called with a key level path but no getChildren is implemented on the storage', async () => {
+			let thrownError: any;
+
+			try {
+				await toArray(target.preOrderBreadthFirstSearch());
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+		});
+
+		it('should return every node of the storage when preOrderBreadthFirstSearch is called with no parameters', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+
+			const result = await toArray(target.preOrderBreadthFirstSearch());
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'a', level: 1, value: { value: 10 }, chainedKey: 'a' },
+				{ key: 'a1', level: 1, value: 'a', chainedKey: 'a1' },
+				{ key: 'b', level: 2, value: { value: 20 }, chainedKey: 'a:b' },
+				{ key: 'b1', level: 2, value: undefined, chainedKey: 'a1:b1' },
+				{ key: 'c', level: 3, value: { value: 30 }, chainedKey: 'a:b:c' },
+				{ key: 'c1', level: 3, value: 'b', chainedKey: 'a1:b1:c1' },
+				{ key: 'd', level: 4, value: { value: 40 }, chainedKey: 'a:b:c:d' },
+				{ key: 'e', level: 5, value: { value: 50 }, chainedKey: 'a:b:c:d:e' },
+				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
+			]);
+		});
+
+		it('should return every node of the storage when preOrderBreadthFirstSearch is called with a given path', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+			map.set('a:b:c2', JSON.stringify('v2'));
+
+			const result = await toArray(
+				target.preOrderBreadthFirstSearch(['a', 'b']),
+			);
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'b', level: 2, value: { value: 20 }, chainedKey: 'a:b' },
+				{ key: 'c', level: 3, value: { value: 30 }, chainedKey: 'a:b:c' },
+				{ key: 'c2', level: 3, value: 'v2', chainedKey: 'a:b:c2' },
+				{ key: 'd', level: 4, value: { value: 40 }, chainedKey: 'a:b:c:d' },
+				{ key: 'e', level: 5, value: { value: 50 }, chainedKey: 'a:b:c:d:e' },
+				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
+			]);
+		});
+	});
+
+	describe(proto.randomIterate.name, () => {
+		it('should throw an error when randomIterate is not implemented', async () => {
+			let thrownError: any;
+
+			try {
+				await toArray(target.randomIterate());
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+		});
+
+		it('should traverse over all the keys of the storage in the storage natural order when no pattern is informed', async () => {
+			map.set('a1:b1:c1', 'test');
+			const keys = Array.from(map.keys());
+			target['storage'].randomIterate = async function* (
+				pattern: string | undefined,
+			) {
+				const regex = pattern ? new RegExp(pattern) : undefined;
+				for (const key of keys) {
+					if (!regex || regex.test(key)) {
+						yield key;
+					}
+				}
+			};
+
+			const result = await toArray(target.randomIterate());
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ chainedKey: 'a', key: 'a', level: 1, value: { value: 10 } },
+				{ chainedKey: 'a:b', key: 'b', level: 2, value: { value: 20 } },
+				{ chainedKey: 'a:b:c', key: 'c', level: 3, value: { value: 30 } },
+				{ chainedKey: 'a:b:c:d:e', key: 'e', level: 5, value: { value: 50 } },
+				{ chainedKey: 'a:b:c:d:e:f', key: 'f', level: 6, value: { value: 60 } },
+				{ chainedKey: 'a1:b1:c1', key: 'c1', level: 3, value: undefined },
+			]);
+		});
+		it('should traverse over all the keys of the storage in the storage natural order when a pattern is informed', async () => {
+			map.set('a1:b1:c1', 'test');
+			const keys = Array.from(map.keys());
+			target['storage'].randomIterate = async function* (
+				pattern: string | undefined,
+			) {
+				const regex = pattern ? new RegExp(pattern) : undefined;
+				for (const key of keys) {
+					if (!regex || regex.test(key)) {
+						yield key;
+					}
+				}
+			};
+
+			const result = await toArray(target.randomIterate('(c:d|b:c$)'));
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ chainedKey: 'a:b:c', key: 'c', level: 3, value: { value: 30 } },
+				{ chainedKey: 'a:b:c:d:e', key: 'e', level: 5, value: { value: 50 } },
+				{ chainedKey: 'a:b:c:d:e:f', key: 'f', level: 6, value: { value: 60 } },
+			]);
+		});
+	});
+
+	describe(proto.reprocessAllKeyLevelChildren.name, () => {
+		it('should throw an error when randomIterate is not implemented', async () => {
+			let thrownError: any;
+			target['storage'].registerChild = jest.fn();
+
+			try {
+				await toArray(target.reprocessAllKeyLevelChildren());
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+		});
+
+		it('should throw an error when registerChild is not implemented', async () => {
+			let thrownError: any;
+			target['storage'].randomIterate = jest.fn();
+
+			try {
+				await toArray(target.reprocessAllKeyLevelChildren());
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+		});
+
+		it('should reprocess children one by one when no parameter is informed', async () => {
+			target['storage'].randomIterate = async function* () {
+				yield* map.keys();
+			};
+			target['storage'].registerChild = jest.fn().mockResolvedValue(undefined);
+
+			const result = await toArray(target.reprocessAllKeyLevelChildren());
+
+			expect(result).toEqual([
+				[[undefined, 'a']],
+				[[undefined, 'a']],
+				[['a', 'b']],
+				[[undefined, 'a']],
+				[['a', 'b']],
+				[['a:b', 'c']],
+				[[undefined, 'a']],
+				[['a', 'b']],
+				[['a:b', 'c']],
+				[['a:b:c', 'd']],
+			]);
+			expect(target['storage'].registerChild).toHaveCallsLike(
+				[undefined, 'a'],
+				[undefined, 'a'],
+				['a', 'b'],
+				[undefined, 'a'],
+				['a', 'b'],
+				['a:b', 'c'],
+				[undefined, 'a'],
+				['a', 'b'],
+				['a:b', 'c'],
+				['a:b:c', 'd'],
+			);
+		});
+
+		it('should reprocess children in the given pace when a parameter is informed', async () => {
+			target['storage'].randomIterate = async function* () {
+				yield* map.keys();
+			};
+			target['storage'].registerChild = jest.fn().mockResolvedValue(undefined);
+
+			const result = await toArray(target.reprocessAllKeyLevelChildren(3));
+
+			expect(result).toEqual([
+				[
+					[undefined, 'a'],
+					[undefined, 'a'],
+					['a', 'b'],
+				],
+				[
+					[undefined, 'a'],
+					['a', 'b'],
+					['a:b', 'c'],
+				],
+				[
+					[undefined, 'a'],
+					['a', 'b'],
+					['a:b', 'c'],
+				],
+				[['a:b:c', 'd']],
+			]);
+			expect(target['storage'].registerChild).toHaveCallsLike(
+				[undefined, 'a'],
+				[undefined, 'a'],
+				['a', 'b'],
+				[undefined, 'a'],
+				['a', 'b'],
+				['a:b', 'c'],
+				[undefined, 'a'],
+				['a', 'b'],
+				['a:b', 'c'],
+				['a:b:c', 'd'],
+			);
 		});
 	});
 });

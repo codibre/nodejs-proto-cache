@@ -1,19 +1,6 @@
 import { ChainedObject, Tree, TreeKeys } from '../../types';
 import { createTraversalItem } from './create-traversal-item';
-
-export interface SimpleList<T> {
-	push(item: T): unknown;
-	pop(): T | undefined;
-	length: number;
-}
-
-export const treeRefSymbol = Symbol('treeRef');
-export const valueSymbol = Symbol('value');
-
-export interface TraversalItem<T> extends ChainedObject {
-	[valueSymbol]: T | undefined;
-	[treeRefSymbol]: Tree<T>;
-}
+import { SimpleList, TraversalItem } from './graph-types';
 
 /**
  * Implementation of pre order traversal for Trees
@@ -26,8 +13,9 @@ export function* treePreOrderTraversal<T>(
 	list: SimpleList<
 		[Tree<T>, number, string | undefined, ChainedObject | undefined]
 	>,
+	startParentRef: ChainedObject | undefined,
 ): Iterable<TraversalItem<T>> {
-	list.push([root, 0, undefined, undefined]);
+	list.push([root, startParentRef?.level ?? 0, undefined, startParentRef]);
 	while (list.length > 0) {
 		const item = list.pop();
 		if (!item) {
@@ -35,10 +23,11 @@ export function* treePreOrderTraversal<T>(
 		}
 		const [treeRef, level, key, parentRef] = item;
 		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
-		let node: TraversalItem<T> | undefined;
-		if (key) {
-			node = createTraversalItem(key, level, parentRef, treeRef, value);
-			yield node;
+		let node: ChainedObject | TraversalItem<T> | undefined;
+		if (key === undefined) {
+			node = parentRef;
+		} else {
+			yield (node = createTraversalItem(key, level, parentRef, treeRef, value));
 		}
 		if (children) {
 			const nextLevel = level + 1;
