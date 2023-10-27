@@ -1,3 +1,10 @@
+# [0.13.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.12.0...v0.13.0) (2023-10-27)
+
+
+### Features
+
+* creating storage traversal methods ([#12](https://github.com/codibre/nodejs-tree-key-cache/issues/12)) ([2a1efe1](https://github.com/codibre/nodejs-tree-key-cache/commit/2a1efe1f9943fb084c6086ea9ee3495b53542f29))
+
 # [0.12.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.11.0...v0.12.0) (2023-10-20)
 
 
