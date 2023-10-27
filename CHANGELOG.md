@@ -1,3 +1,10 @@
+## [0.13.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.13.0...v0.13.1) (2023-10-27)
+
+
+### Bug Fixes
+
+* ignoring value during set iteration when it is expired ([#13](https://github.com/codibre/nodejs-tree-key-cache/issues/13)) ([a65bbb3](https://github.com/codibre/nodejs-tree-key-cache/commit/a65bbb314dac1f61bf2ca367b9a7d95ab2a7920b))
+
 # [0.13.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.12.0...v0.13.0) (2023-10-27)
 
 
