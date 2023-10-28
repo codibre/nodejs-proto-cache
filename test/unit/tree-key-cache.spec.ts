@@ -1801,6 +1801,7 @@ describe(TreeKeyCache.name, () => {
 				{ chainedKey: 'a', key: 'a', level: 1, value: { value: 10 } },
 				{ chainedKey: 'a:b', key: 'b', level: 2, value: { value: 20 } },
 				{ chainedKey: 'a:b:c', key: 'c', level: 3, value: { value: 30 } },
+				{ chainedKey: 'a:b:c:d', key: 'd', level: 4, value: { value: 40 } },
 				{ chainedKey: 'a:b:c:d:e', key: 'e', level: 5, value: { value: 50 } },
 				{ chainedKey: 'a:b:c:d:e:f', key: 'f', level: 6, value: { value: 60 } },
 				{ chainedKey: 'a1:b1:c1', key: 'c1', level: 3, value: undefined },
@@ -1829,6 +1830,7 @@ describe(TreeKeyCache.name, () => {
 				})),
 			).toEqual([
 				{ chainedKey: 'a:b:c', key: 'c', level: 3, value: { value: 30 } },
+				{ chainedKey: 'a:b:c:d', key: 'd', level: 4, value: { value: 40 } },
 				{ chainedKey: 'a:b:c:d:e', key: 'e', level: 5, value: { value: 50 } },
 				{ chainedKey: 'a:b:c:d:e:f', key: 'f', level: 6, value: { value: 60 } },
 			]);
@@ -1933,6 +1935,109 @@ describe(TreeKeyCache.name, () => {
 				['a', 'b'],
 				['a:b', 'c'],
 				['a:b:c', 'd'],
+			);
+		});
+	});
+
+	describe(proto.prune.name, () => {
+		const now = Date.now();
+		beforeEach(() => {
+			jest.spyOn(Date, 'now').mockReturnValue(now);
+			map.set(
+				'a:b:c:d',
+				JSON.stringify({
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
+						e: {
+							v: '{"value":50}',
+							[TreeKeys.deadline]: now - 10,
+							[TreeKeys.children]: {
+								f: { v: '{"value":60}', [TreeKeys.deadline]: now + 10 },
+							},
+						},
+					},
+				} as Tree<string>),
+			);
+			map.set(
+				'a:b:c:d2',
+				JSON.stringify({
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
+						e: {
+							v: '{"value":50}',
+							[TreeKeys.deadline]: now - 10,
+							[TreeKeys.children]: {
+								f: { v: '{"value":60}', [TreeKeys.deadline]: now - 5 },
+							},
+						},
+					},
+				} as Tree<string>),
+			);
+			map.set(
+				'a:b:c:d3',
+				JSON.stringify({
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.children]: {
+						e: {
+							[TreeKeys.children]: {
+								f: {},
+							},
+						},
+					},
+				} as Tree<string>),
+			);
+			const keys = Array.from(map.keys());
+			target['storage'].randomIterate = async function* (
+				pattern: string | undefined,
+			) {
+				const regex = pattern ? new RegExp(pattern) : undefined;
+				for (const key of keys) {
+					if (!regex || regex.test(key)) {
+						yield key;
+					}
+				}
+			};
+		});
+
+		it('should remove totally expired tree level branches', async () => {
+			const result = await target.prune();
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[
+					[
+						'a:b:c:d3',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {},
+						} as Tree<string>),
+					],
+					[
+						'a:b:c:d2',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {},
+						} as Tree<string>),
+					],
+					[
+						'a:b:c:d',
+						JSON.stringify({
+							[TreeKeys.value]: '{"value":40}',
+							[TreeKeys.children]: {
+								e: {
+									[TreeKeys.children]: {
+										f: { v: '{"value":60}', [TreeKeys.deadline]: now + 10 },
+									},
+								},
+							},
+						} as Tree<string>),
+					],
+					['a:b:c', '{"value":30}'],
+					['a:b', '{"value":20}'],
+					['a', '{"value":10}'],
+				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
 			);
 		});
 	});
