@@ -11,5 +11,5 @@ export function treePostOrderDepthFirstSearch<T>(
 	tree: Tree<T>,
 	parentRef: ChainedObject | undefined,
 ) {
-	return treePostOrderTraversal(tree, [], parentRef);
+	return treePostOrderTraversal(tree, [], parentRef, undefined);
 }
