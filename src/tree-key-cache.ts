@@ -1,5 +1,6 @@
 import { getChainedKey } from './utils/get-chained-key';
 import {
+	AsyncTree,
 	ChainedObject,
 	FullSetItem,
 	IterateStep,
@@ -13,6 +14,8 @@ import {
 import { constant, dontWait, getKey, isUndefined } from './utils';
 import {
 	createTraversalItem,
+	treePostOrderBreadthFirstSearch,
+	treePostOrderDepthFirstSearch,
 	treePreOrderBreadthFirstSearch,
 	treePreOrderDepthFirstSearch,
 } from './utils/graphs';
@@ -26,11 +29,14 @@ import {
 import { EventEmitter } from 'events';
 import TypedEmitter from 'typed-emitter';
 import {
+	asyncTreePostOrderBreadthFirstSearch,
+	asyncTreePostOrderDepthFirstSearch,
 	asyncTreePreOrderBreadthFirstSearch,
 	asyncTreePreOrderDepthFirstSearch,
 } from './utils/graphs/async';
 import { DefaultOptions, MergedOptions } from './options-types';
 import { AsyncTreeRef } from './async-tree-ref';
+import { fluent, fluentAsync, identity } from '@codibre/fluent-iterable';
 
 const defaultSerializer = {
 	deserialize: JSON.parse.bind(JSON),
@@ -713,42 +719,103 @@ export class TreeKeyCache<
 		}
 	}
 
-	async *preOrderBreadthFirstSearch(basePath?: string[]) {
-		const nodeRef = basePath ? await this.getNodeRef(basePath) : undefined;
-		if (!basePath || nodeRef) {
-			if (nodeRef) {
-				yield this.getStep(nodeRef[valueSymbol], nodeRef);
-			}
-			const iterable =
-				nodeRef && this.options.keyLevelNodes <= (basePath as string[]).length
-					? treePreOrderBreadthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
-					: asyncTreePreOrderBreadthFirstSearch(
-							new AsyncTreeRef(nodeRef, this.storage, this.options),
-							nodeRef,
-					  );
-			for await (const item of iterable) {
-				yield this.getStep(item[valueSymbol], item);
-			}
-		}
+	private getAsyncTraversalIterable(
+		asyncIterator: (
+			tree: AsyncTree<R>,
+			parentRef: ChainedObject | undefined,
+		) => AsyncIterable<StorageTraversalItem<R>>,
+		nodeRef: TraversalItem<R> | undefined,
+	) {
+		return fluentAsync(
+			asyncIterator(
+				new AsyncTreeRef(nodeRef, this.storage, this.options),
+				nodeRef,
+			),
+		);
 	}
 
-	async *preOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
-		const nodeRef = basePath ? await this.getNodeRef(basePath) : undefined;
-		if (!basePath || nodeRef) {
-			if (nodeRef) {
-				yield this.getStep(nodeRef[valueSymbol], nodeRef);
-			}
+	private getTraversalIterable(
+		nodeRef: TraversalItem<R> | undefined,
+		getAsyncIterable: (
+			tree: AsyncTree<R>,
+			parentRef: ChainedObject | undefined,
+		) => AsyncIterable<StorageTraversalItem<R>>,
+		getIterable: (
+			tree: Tree<R>,
+			parentRef: ChainedObject | undefined,
+		) => Iterable<TraversalItem<R>>,
+		rootLevel: 'append' | 'prepend',
+	) {
+		if (nodeRef) {
 			const iterable =
-				nodeRef && this.options.keyLevelNodes <= (basePath as string[]).length
-					? treePreOrderDepthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
-					: asyncTreePreOrderDepthFirstSearch(
-							new AsyncTreeRef(nodeRef, this.storage, this.options),
-							nodeRef,
-					  );
-			for await (const item of iterable) {
-				yield this.getStep(item[valueSymbol], item);
-			}
+				this.options.keyLevelNodes <= nodeRef.level
+					? fluent(getIterable(nodeRef[treeRefSymbol], nodeRef))
+					: this.getAsyncTraversalIterable(getAsyncIterable, nodeRef);
+			return iterable[rootLevel](nodeRef);
 		}
+		return this.getAsyncTraversalIterable(getAsyncIterable, nodeRef);
+	}
+
+	private getTraversalStepsIterable(
+		getAsyncIterable: (
+			tree: AsyncTree<R>,
+			parentRef: ChainedObject | undefined,
+		) => AsyncIterable<StorageTraversalItem<R>>,
+		getIterable: (
+			tree: Tree<R>,
+			parentRef: ChainedObject | undefined,
+		) => Iterable<TraversalItem<R>>,
+		rootLevel: 'append' | 'prepend',
+		basePath: string[] | undefined,
+	): AsyncIterable<Step<T>> {
+		return fluentAsync([basePath ? this.getNodeRef(basePath) : undefined])
+			.map(identity)
+			.takeWhile((nodeRef) => !basePath || nodeRef)
+			.flatMap((nodeRef) =>
+				this.getTraversalIterable(
+					nodeRef,
+					getAsyncIterable,
+					getIterable,
+					rootLevel,
+				),
+			)
+			.map((item) => this.getStep(item[valueSymbol], item));
+	}
+
+	preOrderBreadthFirstSearch(basePath?: string[]) {
+		return this.getTraversalStepsIterable(
+			asyncTreePreOrderBreadthFirstSearch,
+			treePreOrderBreadthFirstSearch,
+			'prepend',
+			basePath,
+		);
+	}
+
+	preOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
+		return this.getTraversalStepsIterable(
+			asyncTreePreOrderDepthFirstSearch,
+			treePreOrderDepthFirstSearch,
+			'prepend',
+			basePath,
+		);
+	}
+
+	postOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
+		return this.getTraversalStepsIterable(
+			asyncTreePostOrderDepthFirstSearch,
+			treePostOrderDepthFirstSearch,
+			'append',
+			basePath,
+		);
+	}
+
+	postOrderBreadthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
+		return this.getTraversalStepsIterable(
+			asyncTreePostOrderBreadthFirstSearch,
+			treePostOrderBreadthFirstSearch,
+			'append',
+			basePath,
+		);
 	}
 
 	async *reprocessAllKeyLevelChildren(partition = 1) {

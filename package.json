@@ -99,6 +99,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@codibre/fluent-iterable": "^1.32.0",
     "clone": "^2.1.2",
     "typed-emitter": "^2.1.0"
   }
