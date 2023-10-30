@@ -848,29 +848,111 @@ export class TreeKeyCache<
 			yield Promise.all(promises);
 		}
 	}
-
-	/**
-	 * Iterates randomly over the storage
-	 * @param pattern A pattern to filter the desired keys. Notice that the value this pattern will support is deeply connected to the storage implementation used
-	 */
-	async *randomIterate(pattern?: string) {
+	private internalRandomIterate(
+		pattern: string | undefined,
+		iterateTreeLevel: boolean,
+	) {
 		if (!this.storage.randomIterate) {
 			throw new TypeError(
 				'Storage implementation does not support random iteration',
 			);
 		}
-		for await (const key of this.storage.randomIterate(pattern)) {
-			const path = splitKey(key);
-			const nodeRef = await this.getNodeRef(path);
-			if (nodeRef) {
-				const iterable =
-					nodeRef.level >= this.options.keyLevelNodes
-						? treePreOrderBreadthFirstSearch(nodeRef[treeRefSymbol], nodeRef)
-						: [nodeRef];
-				for (const item of iterable) {
-					yield this.getStep(item[valueSymbol], item);
+		return fluentAsync(this.storage.randomIterate(pattern))
+			.map(splitKey)
+			.map(this.getNodeRef.bind(this))
+			.filter()
+			.flatMap((nodeRef) => {
+				if (nodeRef.level < this.options.keyLevelNodes || !iterateTreeLevel) {
+					return [nodeRef];
+				}
+				return fluent(
+					treePreOrderBreadthFirstSearch(nodeRef[treeRefSymbol], nodeRef),
+				).prepend(nodeRef);
+			});
+	}
+
+	/**
+	 * Iterates randomly over the storage
+	 * @param pattern A pattern to filter the desired keys. Notice that the value this pattern will support is deeply connected to the storage implementation used
+	 */
+	randomIterate(pattern?: string) {
+		return this.internalRandomIterate(pattern, true).map((item) =>
+			this.getStep(item[valueSymbol], item),
+		);
+	}
+
+	private internalPrune(
+		rootTree: Tree<R>,
+		parentRef: ChainedObject | undefined,
+	) {
+		const now = Date.now();
+		const iterable = treePostOrderDepthFirstSearch(rootTree, parentRef);
+		let changed = false;
+		const stack: Map<string, boolean>[] = [];
+		for (const item of iterable) {
+			const tree = item[treeRefSymbol];
+			const children = tree[TreeKeys.children];
+			const level = item.level - this.options.keyLevelNodes + 1;
+			if (stack.length > level) {
+				const map = stack.pop();
+				if (map && children) {
+					for (const [key, empty] of map.entries()) {
+						if (empty && key) {
+							delete children[key];
+							changed = true;
+						} else {
+							const parent = (stack[level - 1] ??= new Map());
+							parent.set(item.key, false);
+						}
+					}
+				}
+			}
+			let undefinedValue = isUndefined(item[valueSymbol]);
+			if (TreeKeys.deadline in tree) {
+				const deadline = tree[TreeKeys.deadline];
+				if (!undefinedValue && !this.isNotExpired(deadline, now)) {
+					item[valueSymbol] = tree[TreeKeys.value] = undefined;
+					tree[TreeKeys.deadline] = undefined;
+					changed = true;
+					undefinedValue = true;
+				}
+			}
+			const pos = (stack[level - 1] ??= new Map());
+			if (pos.get(item.key) !== false) {
+				pos.set(item.key, undefinedValue);
+			}
+		}
+		if (stack.length > 0) {
+			const map = stack.pop();
+			if (map) {
+				const children = rootTree[TreeKeys.children];
+				if (children) {
+					for (const [key, empty] of map.entries()) {
+						if (empty && key) {
+							delete children[key];
+							changed = true;
+						}
+					}
 				}
 			}
 		}
+
+		return changed;
+	}
+
+	async prune(pattern?: string) {
+		await fluentAsync(this.internalRandomIterate(pattern, false))
+			.filter(
+				(item) =>
+					item.level === this.options.keyLevelNodes &&
+					this.internalPrune(item[treeRefSymbol], item.parentRef),
+			)
+			.waitAll(async (item) => {
+				const chainedKey = buildKey(item);
+				const release = await this.options.semaphore.acquire(chainedKey);
+				const ttl = await this.storage.getCurrentTtl(chainedKey);
+				await this.persistTree(chainedKey, ttl, item[treeRefSymbol]);
+				dontWait(release);
+			});
 	}
 }
