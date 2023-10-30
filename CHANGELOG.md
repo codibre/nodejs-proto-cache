@@ -1,3 +1,10 @@
+# [0.14.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.13.1...v0.14.0) (2023-10-30)
+
+
+### Features
+
+* refactoring pre-order and implementing post order traversal methods ([#14](https://github.com/codibre/nodejs-tree-key-cache/issues/14)) ([f129c93](https://github.com/codibre/nodejs-tree-key-cache/commit/f129c93a2e7c70e9831f53ce4ee42f8869b4b2f3))
+
 ## [0.13.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.13.0...v0.13.1) (2023-10-27)
 
 
