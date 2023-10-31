@@ -285,17 +285,15 @@ export class TreeKeyCache<
 				if (tree) {
 					const { [TreeKeys.value]: value, [TreeKeys.deadline]: deadline } =
 						tree;
-					if (
-						!isUndefined(value) &&
-						this.isNotExpired(deadline, now) &&
-						nodeRef
-					) {
+					if (nodeRef) {
 						nodeRef = createTraversalItem(
 							nodeRef.key,
 							nodeRef.level,
 							nodeRef.parentRef,
 							tree,
-							tree[TreeKeys.value],
+							!isUndefined(value) && this.isNotExpired(deadline, now)
+								? tree[TreeKeys.value]
+								: undefined,
 						);
 					}
 				}
@@ -893,17 +891,22 @@ export class TreeKeyCache<
 			const tree = item[treeRefSymbol];
 			const children = tree[TreeKeys.children];
 			const level = item.level - this.options.keyLevelNodes + 1;
-			if (stack.length > level) {
+			if (stack.length > level + 1) {
 				const map = stack.pop();
 				if (map && children) {
+					let removeAllChildren = true;
 					for (const [key, empty] of map.entries()) {
 						if (empty) {
-							delete children[key];
+							children[key] = undefined;
 							changed = true;
 						} else {
-							const parent = (stack[level - 1] ??= new Map());
+							removeAllChildren = false;
+							const parent = (stack[level] ??= new Map());
 							parent.set(item.key, false);
 						}
+					}
+					if (removeAllChildren) {
+						tree[TreeKeys.children] = undefined;
 					}
 				}
 			}
@@ -915,22 +918,38 @@ export class TreeKeyCache<
 				changed = true;
 				undefinedValue = true;
 			}
-			const pos = (stack[level - 1] ??= new Map());
+			const pos = (stack[level] ??= new Map());
 			if (pos.get(item.key) !== false) {
 				pos.set(item.key, undefinedValue);
 			}
 		}
 		const map = stack.pop();
+		let removeAllChildren = false;
 		if (map) {
+			removeAllChildren = true;
 			const children = rootTree[TreeKeys.children];
 			if (children) {
 				for (const [key, empty] of map.entries()) {
 					if (empty) {
-						delete children[key];
+						children[key] = undefined;
 						changed = true;
+					} else {
+						removeAllChildren = false;
 					}
 				}
 			}
+		}
+		if (removeAllChildren) {
+			rootTree[TreeKeys.children] = undefined;
+		}
+		const deadline = rootTree[TreeKeys.deadline];
+		if (
+			isUndefined(rootTree[TreeKeys.value]) ||
+			!this.isNotExpired(deadline, now)
+		) {
+			rootTree[TreeKeys.value] = undefined;
+			rootTree[TreeKeys.deadline] = undefined;
+			changed = true;
 		}
 
 		return changed;

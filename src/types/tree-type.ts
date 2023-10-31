@@ -1,6 +1,6 @@
 export type KeyType = string;
 export type TreeChildren<T> = {
-	[t in KeyType]: Tree<T>;
+	[t in KeyType]: Tree<T> | undefined;
 };
 export type AsyncTreeChildren<T> = AsyncIterable<
 	[KeyType, AsyncTree<T> | Tree<T>]

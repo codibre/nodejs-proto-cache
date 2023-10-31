@@ -1986,10 +1986,10 @@ describe(TreeKeyCache.name, () => {
 					},
 				} as Tree<string>),
 			);
-			const keys = Array.from(map.keys());
 			target['storage'].randomIterate = async function* (
 				pattern: string | undefined,
 			) {
+				const keys = Array.from(map.keys());
 				const regex = pattern ? new RegExp(pattern) : undefined;
 				for (const key of keys) {
 					if (!regex || regex.test(key)) {
@@ -2011,14 +2011,12 @@ describe(TreeKeyCache.name, () => {
 						'a:b:c:d3',
 						JSON.stringify({
 							[TreeKeys.value]: '{"value":40}',
-							[TreeKeys.children]: {},
 						} as Tree<string>),
 					],
 					[
 						'a:b:c:d2',
 						JSON.stringify({
 							[TreeKeys.value]: '{"value":40}',
-							[TreeKeys.children]: {},
 						} as Tree<string>),
 					],
 					[
@@ -2079,7 +2077,6 @@ describe(TreeKeyCache.name, () => {
 						'a:b:c:d3',
 						JSON.stringify({
 							[TreeKeys.value]: '{"value":40}',
-							[TreeKeys.children]: {},
 						} as Tree<string>),
 					],
 					[
@@ -2113,6 +2110,47 @@ describe(TreeKeyCache.name, () => {
 					['a:b', '{"value":20}'],
 					['a', '{"value":10}'],
 				].sort((a, b) => (b[0]! > a[0]! ? 1 : -1)),
+			);
+		});
+
+		it('should totally remove a tree when all nodes are empty or expired', async () => {
+			map.clear();
+			map.set(
+				'a:b:c:d2',
+				JSON.stringify({
+					[TreeKeys.value]: '{"value":40}',
+					[TreeKeys.deadline]: now - 10,
+					[TreeKeys.children]: {
+						e: {
+							v: '{"value":50}',
+							[TreeKeys.deadline]: now - 10,
+							[TreeKeys.children]: {
+								f: { v: '{"value":60}', [TreeKeys.deadline]: now - 5 },
+								g: { v: '{"value":60}', [TreeKeys.deadline]: now - 5 },
+								h: {},
+							},
+						},
+						e2: {
+							v: '{"value":50}',
+							[TreeKeys.deadline]: now - 10,
+							[TreeKeys.children]: {
+								f: { v: '{"value":60}', [TreeKeys.deadline]: now - 5 },
+								g: { v: '{"value":60}', [TreeKeys.deadline]: now - 5 },
+							},
+						},
+					},
+				} as Tree<string>),
+			);
+
+			const result = await target.prune();
+
+			expect(result).toBeUndefined();
+			expect(
+				Array.from(map.entries()).sort((a, b) => (b[0] > a[0] ? 1 : -1)),
+			).toEqual(
+				[['a:b:c:d2', JSON.stringify({} as Tree<string>)]].sort((a, b) =>
+					b[0]! > a[0]! ? 1 : -1,
+				),
 			);
 		});
 	});
