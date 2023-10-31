@@ -897,7 +897,7 @@ export class TreeKeyCache<
 				const map = stack.pop();
 				if (map && children) {
 					for (const [key, empty] of map.entries()) {
-						if (empty && key) {
+						if (empty) {
 							delete children[key];
 							changed = true;
 						} else {
@@ -908,30 +908,26 @@ export class TreeKeyCache<
 				}
 			}
 			let undefinedValue = isUndefined(item[valueSymbol]);
-			if (TreeKeys.deadline in tree) {
-				const deadline = tree[TreeKeys.deadline];
-				if (!undefinedValue && !this.isNotExpired(deadline, now)) {
-					item[valueSymbol] = tree[TreeKeys.value] = undefined;
-					tree[TreeKeys.deadline] = undefined;
-					changed = true;
-					undefinedValue = true;
-				}
+			const deadline = tree[TreeKeys.deadline];
+			if (!undefinedValue && !this.isNotExpired(deadline, now)) {
+				item[valueSymbol] = tree[TreeKeys.value] = undefined;
+				tree[TreeKeys.deadline] = undefined;
+				changed = true;
+				undefinedValue = true;
 			}
 			const pos = (stack[level - 1] ??= new Map());
 			if (pos.get(item.key) !== false) {
 				pos.set(item.key, undefinedValue);
 			}
 		}
-		if (stack.length > 0) {
-			const map = stack.pop();
-			if (map) {
-				const children = rootTree[TreeKeys.children];
-				if (children) {
-					for (const [key, empty] of map.entries()) {
-						if (empty && key) {
-							delete children[key];
-							changed = true;
-						}
+		const map = stack.pop();
+		if (map) {
+			const children = rootTree[TreeKeys.children];
+			if (children) {
+				for (const [key, empty] of map.entries()) {
+					if (empty) {
+						delete children[key];
+						changed = true;
 					}
 				}
 			}
