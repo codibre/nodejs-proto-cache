@@ -1,3 +1,10 @@
+# [0.15.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.14.0...v0.15.0) (2023-11-01)
+
+
+### Features
+
+* implementing prune ([#15](https://github.com/codibre/nodejs-tree-key-cache/issues/15)) ([1e5e976](https://github.com/codibre/nodejs-tree-key-cache/commit/1e5e976db44eebfc386457fe8ac32bb5423ec092))
+
 # [0.14.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.13.1...v0.14.0) (2023-10-30)
 
 
