@@ -1,9 +1,5 @@
-import {
-	AsyncSimpleList,
-	Node,
-	isAsyncIterable,
-	isAsyncIterator,
-} from './async-struct-helper';
+import { isAsyncIterable } from '@codibre/fluent-iterable';
+import { AsyncSimpleList, Node, isAsyncIterator } from './async-struct-helper';
 
 export class AsyncQueue<T> implements AsyncSimpleList<T> {
 	private next: Node<T | AsyncIterator<T>> | undefined;

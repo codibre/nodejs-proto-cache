@@ -1,4 +1,4 @@
-import { ChainedObject, Tree } from 'src/types';
+import { ChainedObject, SyncTree } from 'src/types';
 import { Queue } from './queue';
 import { treePostOrderTraversal } from './tree-post-order-traversal';
 
@@ -9,7 +9,7 @@ import { treePostOrderTraversal } from './tree-post-order-traversal';
  * @returns An iterables of { keys, value } objects, where keys contains the id for each node on the path
  */
 export function treePostOrderBreadthFirstSearch<T>(
-	tree: Tree<T>,
+	tree: SyncTree<T>,
 	parentRef: ChainedObject | undefined,
 ) {
 	return treePostOrderTraversal(tree, new Queue(), parentRef, undefined);

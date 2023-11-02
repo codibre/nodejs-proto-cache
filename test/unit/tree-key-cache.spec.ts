@@ -1,3 +1,4 @@
+import { fluent, fluentAsync } from '@codibre/fluent-iterable';
 import { Step, Tree, TreeKeyCache, TreeKeys, buildKey } from '../../src';
 import * as dontWaitLib from 'src/utils/dont-wait';
 
@@ -373,6 +374,97 @@ describe(TreeKeyCache.name, () => {
 				['a:b:c', expect.anything()],
 				['a:b:c:d', expect.anything()],
 			);
+		});
+
+		it('should throw an error during iteration when an async iterable is returned from storage.get but no deserializeAsyncList is implemented on Serializer', async () => {
+			target['storage'].getVersions = jest
+				.fn()
+				.mockReturnValue(fluentAsync([]) as any);
+			const { valueSerializer } = target['options'];
+			valueSerializer.deserializeList = (list) =>
+				fluent(list)
+					.filter()
+					.map((b) => valueSerializer.deserialize(b))
+					.execute((b) => (b.value *= 2))
+					.first();
+			let thrownError: any;
+
+			try {
+				const iterable1 = target.iteratePath(['a', 'b', 'c', 'd', 'e']);
+				await fluentAsync(iterable1).last();
+			} catch (err) {
+				thrownError = err;
+			}
+
+			expect(thrownError).toBeInstanceOf(Error);
+			expect(thrownError.message).toBe(
+				'deserializeAsyncList is not implemented on valueSerializer',
+			);
+		});
+
+		it('should return an iterable for the values stored in partial keys and in the tree-value deserialized with deserializeList, when asyncIterables are returned by stored.get', async () => {
+			const get = map.get.bind(map);
+			target['storage'].getVersions = jest.fn().mockImplementation((k): any => {
+				return fluentAsync([get(k)]);
+			});
+			const { valueSerializer } = target['options'];
+			valueSerializer.deserializeList = (list) =>
+				fluent(list)
+					.filter()
+					.map((b) => valueSerializer.deserialize(b))
+					.execute((b) => (b.value *= 2))
+					.first();
+			valueSerializer.deserializeAsyncList = (list) =>
+				fluentAsync(list)
+					.filter()
+					.map((b) => valueSerializer.deserialize(b))
+					.execute((b) => (b.value *= 2))
+					.first();
+			const result: Step<{ value: number }>[] = [];
+
+			const iterable = target.iteratePath(['a', 'b', 'c', 'd', 'e', 'f']);
+			for await (const item of iterable) {
+				result.push(item);
+			}
+
+			expect(result).toEqual([
+				{
+					key: 'a',
+					level: 1,
+					value: { value: 20 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'b',
+					level: 2,
+					value: { value: 40 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'c',
+					level: 3,
+					value: { value: 60 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: 80 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: 100 },
+					nodeRef: expect.any(Object),
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: 120 },
+					nodeRef: expect.any(Object),
+				},
+			]);
 		});
 	});
 

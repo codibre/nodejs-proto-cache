@@ -2,9 +2,10 @@ export type KeyType = string;
 export type TreeChildren<T> = {
 	[t in KeyType]: Tree<T> | undefined;
 };
-export type AsyncTreeChildren<T> = AsyncIterable<
-	[KeyType, AsyncTree<T> | Tree<T>]
->;
+export type AsyncTreeChildren<T> = AsyncIterable<[KeyType, AnyTree<T>]>;
+export type MultiTreeChildren<T> = {
+	[t in KeyType]: MultiTree<T> | undefined;
+};
 
 export enum TreeKeys {
 	children = 'c',
@@ -17,8 +18,21 @@ export interface BaseTree<T> {
 	[TreeKeys.children]?: object;
 }
 
-export interface AsyncTree<T> extends BaseTree<T> {
+export type TreeValue<T> = T | MultiTreeValue<T>;
+
+export interface AsyncTree<T> extends BaseTree<TreeValue<T>> {
 	[TreeKeys.children]?: () => AsyncTreeChildren<T>;
+}
+
+export const multiTreeValue = Symbol('multiTreeValue');
+
+export interface MultiTreeValue<T> {
+	[multiTreeValue]: T[];
+}
+
+export interface MultiTree<T> extends BaseTree<MultiTreeValue<T>> {
+	[TreeKeys.children]?: MultiTreeChildren<T>;
+	[TreeKeys.deadline]?: number;
 }
 
 export interface Tree<T> extends BaseTree<T> {
@@ -26,7 +40,8 @@ export interface Tree<T> extends BaseTree<T> {
 	[TreeKeys.deadline]?: number;
 }
 
-export type StorageTree<T> = Tree<T> | AsyncTree<T>;
+export type SyncTree<T> = Tree<T> | MultiTree<T>;
+export type AnyTree<T> = SyncTree<T> | AsyncTree<T>;
 
 export interface Step<T> {
 	value: T | undefined;

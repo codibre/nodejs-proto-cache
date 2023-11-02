@@ -1,7 +1,8 @@
-import { AsyncTree, ChainedObject, Tree, TreeKeys } from 'src/types';
+import { ChainedObject, AnyTree, TreeKeys } from 'src/types';
 import { createTraversalItem } from '../create-traversal-item';
-import { StorageTraversalItem } from '../graph-types';
+import { AnyTraversalItem } from '../graph-types';
 import { AsyncSimpleList } from './async-struct-helper';
+import { isAsyncIterable } from '@codibre/fluent-iterable';
 
 /**
  * Implementation of pre order traversal for Trees
@@ -10,21 +11,23 @@ import { AsyncSimpleList } from './async-struct-helper';
  * @returns An iterables of { keys, value } objects, where keys contains the id for each node on the path
  */
 export async function* asyncTreePostOrderTraversal<T>(
-	treeRef: AsyncTree<T> | Tree<T>,
+	treeRef: AnyTree<T>,
 	list: AsyncSimpleList<
-		[AsyncTree<T> | Tree<T>, string | undefined, ChainedObject | undefined]
+		[AnyTree<T>, string | undefined, ChainedObject | undefined]
 	>,
 	parentRef: ChainedObject | undefined,
 	key: string | undefined,
-): AsyncIterable<StorageTraversalItem<T>> {
+): AsyncIterable<AnyTraversalItem<T>> {
 	const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
 	const level = parentRef?.level ?? 0;
-	let node: StorageTraversalItem<T> | undefined;
+	let node: AnyTraversalItem<T> | undefined;
 	if (key !== undefined) {
 		node = createTraversalItem(key, level + 1, parentRef, treeRef, value);
 	}
-	if (typeof children === 'function') {
-		for await (const [nextKey, nextValue] of children.call(treeRef)) {
+	const childrenResult =
+		typeof children === 'function' ? children.call(treeRef) : children;
+	if (isAsyncIterable(childrenResult)) {
+		for await (const [nextKey, nextValue] of childrenResult) {
 			if (nextValue !== undefined) {
 				yield* asyncTreePostOrderTraversal<T>(
 					nextValue,
@@ -34,10 +37,10 @@ export async function* asyncTreePostOrderTraversal<T>(
 				);
 			}
 		}
-	} else if (children) {
+	} else if (childrenResult) {
 		// eslint-disable-next-line guard-for-in
-		for (const nextKey in children) {
-			const nextTree = children[nextKey];
+		for (const nextKey in childrenResult) {
+			const nextTree = childrenResult[nextKey];
 			if (nextTree) {
 				await list.push([nextTree, nextKey, node]);
 				yield* asyncTreePostOrderTraversal<T>(

@@ -1,7 +1,18 @@
-import { AsyncTree, ChainedObject, StorageTree, Tree } from '../../types';
+import {
+	AsyncTree,
+	ChainedObject,
+	MultiTree,
+	MultiTreeValue,
+	AnyTree,
+	SyncTree,
+	TreeValue,
+	Tree,
+} from '../../types';
 import {
 	AsyncTraversalItem,
-	StorageTraversalItem,
+	MultiTraversalItem,
+	AnyTraversalItem,
+	SyncTraversalItem,
 	TraversalItem,
 	treeRefSymbol,
 	valueSymbol,
@@ -25,16 +36,30 @@ export function createTraversalItem<T>(
 	key: string,
 	level: number,
 	parentRef: ChainedObject | undefined,
-	treeRef: StorageTree<T>,
-	value?: T,
-): StorageTraversalItem<T>;
+	treeRef: MultiTree<T>,
+	value?: MultiTreeValue<T>,
+): MultiTraversalItem<T>;
 export function createTraversalItem<T>(
 	key: string,
 	level: number,
 	parentRef: ChainedObject | undefined,
-	treeRef: StorageTree<T>,
+	treeRef: SyncTree<T>,
+	value?: TreeValue<T>,
+): SyncTraversalItem<T>;
+export function createTraversalItem<T>(
+	key: string,
+	level: number,
+	parentRef: ChainedObject | undefined,
+	treeRef: AnyTree<T>,
+	value?: TreeValue<T>,
+): AnyTraversalItem<T>;
+export function createTraversalItem<T>(
+	key: string,
+	level: number,
+	parentRef: ChainedObject | undefined,
+	treeRef: AnyTree<T>,
 	value?: T,
-): StorageTraversalItem<T> {
+): AnyTraversalItem<T> {
 	return {
 		key,
 		parentRef,

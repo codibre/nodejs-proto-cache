@@ -2,31 +2,27 @@ import {
 	AsyncTree,
 	AsyncTreeChildren,
 	ChainedObject,
-	Tree,
+	AnyTree,
 	TreeKeys,
 } from 'src/types';
 import { createTraversalItem } from '../create-traversal-item';
-import { StorageTraversalItem } from '../graph-types';
+import { AnyTraversalItem } from '../graph-types';
 import { AsyncSimpleList } from './async-struct-helper';
+import { isAsyncIterable } from '@codibre/fluent-iterable';
 
 async function* pushIterable<T>(
-	children: () => AsyncTreeChildren<T>,
+	iterable: AsyncTreeChildren<T>,
 	level: number,
 	node: ChainedObject | undefined,
 ): AsyncIterable<
-	[
-		AsyncTree<T> | Tree<T>,
-		number,
-		string | undefined,
-		ChainedObject | undefined,
-	]
+	[AnyTree<T>, number, string | undefined, ChainedObject | undefined]
 > {
-	const iterable = children();
 	const nextLevel = level + 1;
-	// eslint-disable-next-line guard-for-in
-	for await (const [nextKey, nextValue] of iterable) {
-		if (nextValue !== undefined) {
-			yield [nextValue, nextLevel, nextKey, node];
+	if (isAsyncIterable(iterable)) {
+		for await (const [nextKey, nextValue] of iterable) {
+			if (nextValue !== undefined) {
+				yield [nextValue, nextLevel, nextKey, node];
+			}
 		}
 	}
 }
@@ -40,15 +36,10 @@ async function* pushIterable<T>(
 export async function* asyncTreePreOrderTraversal<T>(
 	root: AsyncTree<T>,
 	list: AsyncSimpleList<
-		[
-			AsyncTree<T> | Tree<T>,
-			number,
-			string | undefined,
-			ChainedObject | undefined,
-		]
+		[AnyTree<T>, number, string | undefined, ChainedObject | undefined]
 	>,
 	initialParentRef: ChainedObject | undefined,
-): AsyncIterable<StorageTraversalItem<T>> {
+): AsyncIterable<AnyTraversalItem<T>> {
 	await list.push([
 		root,
 		initialParentRef?.level ?? 0,
@@ -62,19 +53,27 @@ export async function* asyncTreePreOrderTraversal<T>(
 		}
 		const [treeRef, level, key, parentRef] = item;
 		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
-		let node: ChainedObject | StorageTraversalItem<T> | undefined;
+		let node: ChainedObject | AnyTraversalItem<T> | undefined;
 		if (key === undefined) {
 			node = parentRef;
 		} else {
-			yield (node = createTraversalItem(key, level, parentRef, treeRef, value));
+			yield (node = createTraversalItem<T>(
+				key,
+				level,
+				parentRef,
+				treeRef,
+				value,
+			));
 		}
-		if (typeof children === 'function') {
-			await list.push(pushIterable(children.bind(treeRef), level, node));
+		const childrenResult =
+			typeof children === 'function' ? children.call(treeRef) : children;
+		if (isAsyncIterable(childrenResult)) {
+			await list.push(pushIterable(childrenResult, level, node));
 		} else if (children) {
 			const nextLevel = level + 1;
 			// eslint-disable-next-line guard-for-in
-			for (const nextKey in children) {
-				const nextValue = children[nextKey];
+			for (const nextKey in childrenResult) {
+				const nextValue = childrenResult[nextKey];
 				if (nextValue) {
 					await list.push([nextValue, nextLevel, nextKey, node]);
 				}

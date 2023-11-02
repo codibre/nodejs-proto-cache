@@ -1,4 +1,11 @@
-import { ChainedObject, StorageTree, Tree } from 'src/types';
+import {
+	ChainedObject,
+	MultiTree,
+	MultiTreeValue,
+	AnyTree,
+	TreeValue,
+	Tree,
+} from 'src/types';
 
 export interface SimpleList<T> {
 	push(item: T): unknown;
@@ -14,15 +21,18 @@ export interface BaseTraversalItem<T> extends ChainedObject {
 	[treeRefSymbol]: object;
 }
 
-export interface AsyncTraversalItem<T> extends BaseTraversalItem<T> {
-	[valueSymbol]: T | undefined;
-	[treeRefSymbol]: StorageTree<T>;
+export interface AsyncTraversalItem<T> extends BaseTraversalItem<TreeValue<T>> {
+	[treeRefSymbol]: AnyTree<T>;
 }
 
 export interface TraversalItem<T> extends BaseTraversalItem<T> {
 	[treeRefSymbol]: Tree<T>;
 }
 
-export interface StorageTraversalItem<T> extends BaseTraversalItem<T> {
-	[treeRefSymbol]: StorageTree<T>;
+export interface MultiTraversalItem<T>
+	extends BaseTraversalItem<MultiTreeValue<T>> {
+	[treeRefSymbol]: MultiTree<T>;
 }
+
+export type SyncTraversalItem<T> = TraversalItem<T> | MultiTraversalItem<T>;
+export type AnyTraversalItem<T> = SyncTraversalItem<T> | AsyncTraversalItem<T>;

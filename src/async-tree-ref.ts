@@ -1,18 +1,27 @@
+import { isAsyncIterable } from '@codibre/fluent-iterable';
 import { MergedOptions } from './options-types';
 import {
 	AsyncTree,
 	AsyncTreeChildren,
 	KeyTreeCacheStorage,
 	TreeKeys,
+	TreeValue,
 } from './types';
 import { createTraversalItem } from './utils/graphs';
 import { buildKey } from './utils/graphs/build-key';
-import { StorageTraversalItem, valueSymbol } from './utils/graphs/graph-types';
+import { AnyTraversalItem, valueSymbol } from './utils/graphs/graph-types';
+import { MultiTreeRef } from './multi-tree-ref';
+import {
+	getMultiValueFromAsyncIterable,
+	getReadStorageFunction,
+	getTreeListFromAsyncIterable,
+	isUndefined,
+} from './utils';
 
 export class AsyncTreeRef<R> implements AsyncTree<R> {
-	[TreeKeys.value]?: R;
+	[TreeKeys.value]?: TreeValue<R>;
 	constructor(
-		private nodeRef: StorageTraversalItem<R> | undefined,
+		private nodeRef: AnyTraversalItem<R> | undefined,
 		private storage: KeyTreeCacheStorage<R>,
 		private options: MergedOptions<unknown, R>,
 	) {
@@ -24,6 +33,7 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 				'This storage does not support DFS or BFS on key level nodes',
 			);
 		}
+		const get = getReadStorageFunction(this.storage);
 		let iterable: AsyncIterable<string>;
 		let startLevel: number;
 		if (this.nodeRef) {
@@ -42,20 +52,30 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 					this.nodeRef,
 					this,
 				);
-				const value = await this.storage.get(buildKey(traversalItem));
-				traversalItem[valueSymbol] = value;
+				const value = await get(buildKey(traversalItem));
 				if (level < this.options.keyLevelNodes) {
+					traversalItem[valueSymbol] = isAsyncIterable(value)
+						? await getMultiValueFromAsyncIterable(value)
+						: value;
 					yield [
 						item,
 						new AsyncTreeRef(traversalItem, this.storage, this.options),
 					];
-				} else if (value) {
-					if (level === this.options.keyLevelNodes) {
-						const tree = this.options.treeSerializer.deserialize(value);
-						yield [item, tree];
-					} else {
+				} else if (!isUndefined(value)) {
+					if (level > this.options.keyLevelNodes) {
 						throw new Error('Something went wrong');
 					}
+					const tree = !isAsyncIterable(value)
+						? this.options.treeSerializer.deserialize(value)
+						: new MultiTreeRef<R>(
+								traversalItem,
+								await getMultiValueFromAsyncIterable(value),
+								await getTreeListFromAsyncIterable(
+									this.options.treeSerializer,
+									value,
+								),
+						  );
+					yield [item, tree];
 				}
 			}
 		}
