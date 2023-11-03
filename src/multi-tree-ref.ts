@@ -6,8 +6,6 @@ import {
 	MultiTreeValue,
 	Tree,
 	TreeKeys,
-	TreeValue,
-	multiTreeValue,
 } from './types';
 import { createTraversalItem } from './utils/graphs';
 import { getMultiValueFromTrees, isUndefined } from './utils';
@@ -17,16 +15,9 @@ export class MultiTreeRef<R> implements MultiTree<R> {
 	[TreeKeys.value]?: MultiTreeValue<R>;
 	constructor(
 		private nodeRef: ChainedObject | undefined,
-		value: TreeValue<R> | undefined,
 		private trees: Tree<R>[],
 	) {
-		this[TreeKeys.value] =
-			isUndefined(value) ||
-			(typeof value === 'object' && value && multiTreeValue in value)
-				? value
-				: {
-						[multiTreeValue]: [value],
-				  };
+		this[TreeKeys.value] = getMultiValueFromTrees(trees);
 	}
 
 	get [TreeKeys.children](): MultiTreeChildren<R> | undefined {
@@ -50,7 +41,6 @@ export class MultiTreeRef<R> implements MultiTree<R> {
 				({ key, trees }) =>
 					new MultiTreeRef<R>(
 						createTraversalItem<R>(key, 0, this.nodeRef, this),
-						getMultiValueFromTrees(trees),
 						trees,
 					),
 			);

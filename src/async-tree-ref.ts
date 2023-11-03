@@ -69,7 +69,6 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 						? this.options.treeSerializer.deserialize(value)
 						: new MultiTreeRef<R>(
 								traversalItem,
-								await getMultiValueFromAsyncIterable(value),
 								await getTreeListFromAsyncIterable(
 									this.options.treeSerializer,
 									value,

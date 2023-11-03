@@ -1,11 +1,6 @@
 import { ChainedObject, SyncTree, TreeKeys } from '../../types';
 import { createTraversalItem } from './create-traversal-item';
-import {
-	MultiTraversalItem,
-	SimpleList,
-	SyncTraversalItem,
-	TraversalItem,
-} from './graph-types';
+import { SimpleList, SyncTraversalItem } from './graph-types';
 
 /**
  * Implementation of pre order traversal for Trees
@@ -28,11 +23,7 @@ export function* treePreOrderTraversal<T>(
 		}
 		const [treeRef, level, key, parentRef] = item;
 		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
-		let node:
-			| ChainedObject
-			| MultiTraversalItem<T>
-			| TraversalItem<T>
-			| undefined;
+		let node: ChainedObject | undefined;
 		if (key === undefined) {
 			node = parentRef;
 		} else {

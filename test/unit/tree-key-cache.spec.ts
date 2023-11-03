@@ -377,7 +377,7 @@ describe(TreeKeyCache.name, () => {
 		});
 
 		it('should throw an error during iteration when an async iterable is returned from storage.get but no deserializeAsyncList is implemented on Serializer', async () => {
-			target['storage'].getVersions = jest
+			target['storage'].getHistory = jest
 				.fn()
 				.mockReturnValue(fluentAsync([]) as any);
 			const { valueSerializer } = target['options'];
@@ -404,7 +404,7 @@ describe(TreeKeyCache.name, () => {
 
 		it('should return an iterable for the values stored in partial keys and in the tree-value deserialized with deserializeList, when asyncIterables are returned by stored.get', async () => {
 			const get = map.get.bind(map);
-			target['storage'].getVersions = jest.fn().mockImplementation((k): any => {
+			target['storage'].getHistory = jest.fn().mockImplementation((k): any => {
 				return fluentAsync([get(k)]);
 			});
 			const { valueSerializer } = target['options'];
@@ -1460,6 +1460,145 @@ describe(TreeKeyCache.name, () => {
 				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
 			]);
 		});
+
+		it('should return every node of the storage when getVersions is implemented', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			target['storage'].getHistory = function (key: string) {
+				const value = map.get(key);
+				return fluentAsync([
+					value,
+					key === 'a:b:c:d'
+						? JSON.stringify({
+								[TreeKeys.value]: 99,
+								[TreeKeys.children]: {
+									1: {
+										[TreeKeys.value]: 11,
+									},
+									2: {
+										[TreeKeys.value]: 22,
+									},
+									3: {
+										[TreeKeys.value]: 33,
+										[TreeKeys.children]: {
+											f: { v: 44 },
+										},
+									},
+									e: {
+										[TreeKeys.value]: 99,
+										[TreeKeys.children]: {
+											f: {
+												[TreeKeys.value]: 11,
+											},
+										},
+									},
+								},
+						  })
+						: value,
+				]);
+			};
+			const { valueSerializer } = target['options'];
+			valueSerializer.deserializeList = (b) => {
+				return {
+					value: fluent(b)
+						.filter()
+						.map((item) => valueSerializer.deserialize(item))
+						.map((x) => x.value ?? x)
+						.join(',', (x) => x.toString()) as any,
+				};
+			};
+			valueSerializer.deserializeAsyncList = async (b) => {
+				return {
+					value: (await fluentAsync(b)
+						.filter()
+						.map((item) => valueSerializer.deserialize(item))
+						.map((x) => x.value ?? x)
+						.join(',', (x) => x.toString())) as any,
+				};
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+			map.set('a:b:c2', JSON.stringify('v2'));
+
+			const result = await toArray(target.preOrderDepthFirstSearch(['a', 'b']));
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'b', level: 2, value: { value: '20,20' }, chainedKey: 'a:b' },
+				{
+					key: 'c2',
+					level: 3,
+					value: { value: 'v2,v2' },
+					chainedKey: 'a:b:c2',
+				},
+				{ key: 'c', level: 3, value: { value: '30,30' }, chainedKey: 'a:b:c' },
+				{
+					key: 'd',
+					level: 4,
+					value: { value: '40,99' },
+					chainedKey: 'a:b:c:d',
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: '50,99' },
+					chainedKey: 'a:b:c:d:e',
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: '60,11' },
+					chainedKey: 'a:b:c:d:e:f',
+				},
+				{
+					key: '3',
+					level: 5,
+					value: { value: '33' },
+					chainedKey: 'a:b:c:d:3',
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: '44' },
+					chainedKey: 'a:b:c:d:3:f',
+				},
+				{
+					key: '2',
+					level: 5,
+					value: { value: '22' },
+					chainedKey: 'a:b:c:d:2',
+				},
+				{
+					key: '1',
+					level: 5,
+					value: { value: '11' },
+					chainedKey: 'a:b:c:d:1',
+				},
+			]);
+		});
 	});
 
 	describe(proto.postOrderDepthFirstSearch.name, () => {
@@ -1705,6 +1844,139 @@ describe(TreeKeyCache.name, () => {
 				{ key: 'd', level: 4, value: { value: 40 }, chainedKey: 'a:b:c:d' },
 				{ key: 'e', level: 5, value: { value: 50 }, chainedKey: 'a:b:c:d:e' },
 				{ key: 'f', level: 6, value: { value: 60 }, chainedKey: 'a:b:c:d:e:f' },
+			]);
+		});
+
+		it('should return every node of the storage when getVersions is implemented', async () => {
+			target['storage'].getChildren = async function* (
+				start: string | undefined,
+			) {
+				const keys = map.keys();
+				const childSize = !start ? 1 : start.split(':').length + 1;
+				const set = new Set();
+				if (start) {
+					start = `${start}:`;
+				}
+
+				for (const key of keys) {
+					if (!start || (key !== start && key.startsWith(start))) {
+						const path = key.split(':').slice(0, childSize);
+						const childKey = buildKey(path);
+						if (!set.has(childKey)) {
+							set.add(childKey);
+							yield path[path.length - 1] as string;
+						}
+					}
+				}
+			};
+			target['storage'].getHistory = function (key: string) {
+				const value = map.get(key);
+				return fluentAsync([
+					value,
+					key === 'a:b:c:d'
+						? JSON.stringify({
+								[TreeKeys.value]: 99,
+								[TreeKeys.children]: {
+									1: {
+										[TreeKeys.value]: 11,
+									},
+									2: {
+										[TreeKeys.value]: 22,
+									},
+									3: {
+										[TreeKeys.value]: 33,
+										[TreeKeys.children]: {
+											4: { v: 44 },
+										},
+									},
+								},
+						  })
+						: value,
+				]);
+			};
+			const { valueSerializer } = target['options'];
+			valueSerializer.deserializeList = (b) => {
+				return {
+					value: fluent(b)
+						.filter()
+						.map((item) => valueSerializer.deserialize(item))
+						.map((x) => x.value ?? x)
+						.join(',', (x) => x.toString()) as any,
+				};
+			};
+			valueSerializer.deserializeAsyncList = async (b) => {
+				return {
+					value: (await fluentAsync(b)
+						.filter()
+						.map((item) => valueSerializer.deserialize(item))
+						.map((x) => x.value ?? x)
+						.join(',', (x) => x.toString())) as any,
+				};
+			};
+			map.set('a1', JSON.stringify('a'));
+			map.set('a1:b1:c1', JSON.stringify('b'));
+			map.set('a:b:c2', JSON.stringify('v2'));
+
+			const result = await toArray(
+				target.preOrderBreadthFirstSearch(['a', 'b']),
+			);
+
+			expect(
+				result.map(({ nodeRef, ...x }) => ({
+					...x,
+					chainedKey: buildKey(nodeRef),
+				})),
+			).toEqual([
+				{ key: 'b', level: 2, value: { value: '20,20' }, chainedKey: 'a:b' },
+				{ key: 'c', level: 3, value: { value: '30,30' }, chainedKey: 'a:b:c' },
+				{
+					key: 'c2',
+					level: 3,
+					value: { value: 'v2,v2' },
+					chainedKey: 'a:b:c2',
+				},
+				{
+					key: 'd',
+					level: 4,
+					value: { value: '40,99' },
+					chainedKey: 'a:b:c:d',
+				},
+				{
+					key: '1',
+					level: 5,
+					value: { value: '11' },
+					chainedKey: 'a:b:c:d:1',
+				},
+				{
+					key: '2',
+					level: 5,
+					value: { value: '22' },
+					chainedKey: 'a:b:c:d:2',
+				},
+				{
+					key: '3',
+					level: 5,
+					value: { value: '33' },
+					chainedKey: 'a:b:c:d:3',
+				},
+				{
+					key: 'e',
+					level: 5,
+					value: { value: '50' },
+					chainedKey: 'a:b:c:d:e',
+				},
+				{
+					key: '4',
+					level: 6,
+					value: { value: '44' },
+					chainedKey: 'a:b:c:d:3:4',
+				},
+				{
+					key: 'f',
+					level: 6,
+					value: { value: '60' },
+					chainedKey: 'a:b:c:d:e:f',
+				},
 			]);
 		});
 	});

@@ -195,15 +195,7 @@ export class TreeKeyCache<
 				.filter()
 				.map((buffer) => this.options.treeSerializer.deserialize(buffer))
 				.toArray();
-			const value = nodeRef
-				? {
-						[multiTreeValue]: fluent(trees)
-							.map(TreeKeys.value)
-							.filter()
-							.toArray(),
-				  }
-				: undefined;
-			return new MultiTreeRef<R>(nodeRef, value, trees);
+			return new MultiTreeRef<R>(nodeRef, trees);
 		} catch (error) {
 			this.emit('deserializeError', error, 'tree');
 		}
@@ -390,7 +382,6 @@ export class TreeKeyCache<
 				if (isAsyncIterable(buffer)) {
 					tree = new MultiTreeRef(
 						nodeRef,
-						nodeRef[valueSymbol],
 						await fluentAsync(buffer)
 							.filter()
 							.map((buff) => this.options.treeSerializer.deserialize(buff))
