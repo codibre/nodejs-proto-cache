@@ -3,4 +3,8 @@ export * from './deserialize-whole-tree';
 export * from './dont-wait';
 export * from './get-chained-key';
 export * from './get-key';
+export * from './get-multi-value-from-async-iterable';
+export * from './get-multi-value-from-trees';
+export * from './get-read-storage-function';
+export * from './get-tree-list-from-async-iterable';
 export * from './is-undefined';

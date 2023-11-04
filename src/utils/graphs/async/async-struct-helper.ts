@@ -14,10 +14,3 @@ export function isAsyncIterator<T>(
 ): value is AsyncIterator<T> {
 	return value !== null && typeof value === 'object' && 'next' in value;
 }
-export function isAsyncIterable<T>(
-	value: AsyncIterable<T> | T | undefined,
-): value is AsyncIterable<T> {
-	return (
-		value !== null && typeof value === 'object' && Symbol.asyncIterator in value
-	);
-}

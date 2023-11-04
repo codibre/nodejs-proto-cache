@@ -1,6 +1,6 @@
-import { ChainedObject, Tree, TreeKeys } from 'src/types';
+import { ChainedObject, SyncTree, TreeKeys } from 'src/types';
 import { createTraversalItem } from './create-traversal-item';
-import { SimpleList, TraversalItem } from './graph-types';
+import { SimpleList, SyncTraversalItem } from './graph-types';
 
 /**
  * Implementation of pre order traversal for Trees
@@ -9,16 +9,18 @@ import { SimpleList, TraversalItem } from './graph-types';
  * @returns An iterables of { keys, value } objects, where keys contains the id for each node on the path
  */
 export function* treePostOrderTraversal<T>(
-	treeRef: Tree<T>,
-	list: SimpleList<[Tree<T>, string | undefined, ChainedObject | undefined]>,
+	treeRef: SyncTree<T>,
+	list: SimpleList<
+		[SyncTree<T>, string | undefined, ChainedObject | undefined]
+	>,
 	parentRef: ChainedObject | undefined,
 	key: string | undefined,
-): Iterable<TraversalItem<T>> {
+): Iterable<SyncTraversalItem<T>> {
 	const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
 	const level = parentRef?.level ?? 0;
-	let node: TraversalItem<T> | undefined;
+	let node: SyncTraversalItem<T> | undefined;
 	if (key !== undefined) {
-		node = createTraversalItem(key, level + 1, parentRef, treeRef, value);
+		node = createTraversalItem<T>(key, level + 1, parentRef, treeRef, value);
 	}
 	if (children) {
 		// eslint-disable-next-line guard-for-in

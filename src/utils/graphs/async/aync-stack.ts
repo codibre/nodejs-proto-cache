@@ -1,4 +1,5 @@
-import { AsyncSimpleList, isAsyncIterable } from './async-struct-helper';
+import { isAsyncIterable } from '@codibre/fluent-iterable';
+import { AsyncSimpleList } from './async-struct-helper';
 
 export class AsyncStack<T> implements AsyncSimpleList<T> {
 	private stack: Array<T> = [];

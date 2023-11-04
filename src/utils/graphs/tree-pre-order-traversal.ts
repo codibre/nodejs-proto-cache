@@ -1,6 +1,6 @@
-import { ChainedObject, Tree, TreeKeys } from '../../types';
+import { ChainedObject, SyncTree, TreeKeys } from '../../types';
 import { createTraversalItem } from './create-traversal-item';
-import { SimpleList, TraversalItem } from './graph-types';
+import { SimpleList, SyncTraversalItem } from './graph-types';
 
 /**
  * Implementation of pre order traversal for Trees
@@ -9,12 +9,12 @@ import { SimpleList, TraversalItem } from './graph-types';
  * @returns An iterables of { keys, value } objects, where keys contains the id for each node on the path
  */
 export function* treePreOrderTraversal<T>(
-	root: Tree<T>,
+	root: SyncTree<T>,
 	list: SimpleList<
-		[Tree<T>, number, string | undefined, ChainedObject | undefined]
+		[SyncTree<T>, number, string | undefined, ChainedObject | undefined]
 	>,
 	startParentRef: ChainedObject | undefined,
-): Iterable<TraversalItem<T>> {
+): Iterable<SyncTraversalItem<T>> {
 	list.push([root, startParentRef?.level ?? 0, undefined, startParentRef]);
 	while (list.length > 0) {
 		const item = list.pop();
@@ -23,11 +23,17 @@ export function* treePreOrderTraversal<T>(
 		}
 		const [treeRef, level, key, parentRef] = item;
 		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
-		let node: ChainedObject | TraversalItem<T> | undefined;
+		let node: ChainedObject | undefined;
 		if (key === undefined) {
 			node = parentRef;
 		} else {
-			yield (node = createTraversalItem(key, level, parentRef, treeRef, value));
+			yield (node = createTraversalItem<T>(
+				key,
+				level,
+				parentRef,
+				treeRef,
+				value,
+			));
 		}
 		if (children) {
 			const nextLevel = level + 1;
