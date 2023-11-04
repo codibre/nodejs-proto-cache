@@ -191,6 +191,20 @@ You can also implement the method randomIterate, which must return an AsyncItera
 
 This method, when called, can recreate all key level children registration within the storage. To use it, you must implement **randomIterate** and **registerChild**. Additionally, if you implement **clearAllChildrenRegistry**, this method will, first, clear all children registration and only then will create them.
 
+
+## Prune
+
+If you implement the storage with Redis, every key saved there can have its own ttl, but nodes on tree level keys will have the problem that Redis will not control its ttl, as they are literally part of the value. To solve that problem, this library offers the method **prune**. Calling this method will shrink all the tree level keys, removing expired or empty values, and also removing totally empty or expired branches of the tree.
+This will help you keeping your storage as compact as possible. You can, for example, create a schedule to call this method once a day.
+
+## Versioned values
+
+This library also support dealing with multiple, history values for the same key. The idea is, if you have an use case where you need the last n registered values of a given key to extract some info, like an average, for example, you'll be able to do it over the tree structure. To achieve that, first of all, you need to implement the method **getHistory** on your storage, to return an AsyncIterable with all the history values of the given key. Next, you need to control how things are saved on the **set** method, to persist this history. Here are some valid approaches:
+* Always including method: Making **get** always return undefined, so no update is possible, and always saving the value on a new key. The name pattern for those keys must be controlled in a way that it doesn't conflict with the chained keys the library pass to the storage;
+* Cycling method: you save the same key on a different redis db, based on a roundtrip based on time (db 5 every even week, db 6 every odd week, for example). The ttl of those keys must be calibrated in a way that, when you change dbs, all the keys of the current one has expired. Finally, getHistory always look up the given key in all dbs to return its AsyncIterable;
+
+These are some implementation suggestions, but of course there are many other ways to implement that!
+
 ## Custom serializers
 
 By default, tree-key-cache uses JSON to serialize and deserialize either values or trees to be saved on redis, but you can achieve an even greater memory saving by using a custom binary serializer.

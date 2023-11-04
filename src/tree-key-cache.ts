@@ -907,6 +907,12 @@ export class TreeKeyCache<
 			});
 	}
 
+	/**
+	 * Returns an async iterable that traverses the tree on a pre order, breadth first search fashion.
+	 * To perform traversals on key level nodes, you need to have implemented the getChildren method
+	 * on the storage. Traversals on tree level nodes are always supported
+	 * @param basePath The base path to be traversed
+	 */
 	preOrderBreadthFirstSearch(basePath?: string[]) {
 		return this.getTraversalStepsIterable(
 			asyncTreePreOrderBreadthFirstSearch,
@@ -916,6 +922,12 @@ export class TreeKeyCache<
 		);
 	}
 
+	/**
+	 * Returns an async iterable that traverses the tree on a pre order, depth first search fashion.
+	 * To perform traversals on key level nodes, you need to have implemented the getChildren method
+	 * on the storage. Traversals on tree level nodes are always supported
+	 * @param basePath The base path to be traversed
+	 */
 	preOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
 		return this.getTraversalStepsIterable(
 			asyncTreePreOrderDepthFirstSearch,
@@ -925,15 +937,12 @@ export class TreeKeyCache<
 		);
 	}
 
-	postOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
-		return this.getTraversalStepsIterable(
-			asyncTreePostOrderDepthFirstSearch,
-			treePostOrderDepthFirstSearch,
-			'append',
-			basePath,
-		);
-	}
-
+	/**
+	 * Returns an async iterable that traverses the tree on a post order, breadth first search fashion.
+	 * To perform traversals on key level nodes, you need to have implemented the getChildren method
+	 * on the storage. Traversals on tree level nodes are always supported
+	 * @param basePath The base path to be traversed
+	 */
 	postOrderBreadthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
 		return this.getTraversalStepsIterable(
 			asyncTreePostOrderBreadthFirstSearch,
@@ -943,6 +952,28 @@ export class TreeKeyCache<
 		);
 	}
 
+	/**
+	 * Returns an async iterable that traverses the tree on a post order, depth first search fashion.
+	 * To perform traversals on key level nodes, you need to have implemented the getChildren method
+	 * on the storage. Traversals on tree level nodes are always supported
+	 * @param basePath The base path to be traversed
+	 */
+	postOrderDepthFirstSearch(basePath?: string[]): AsyncIterable<Step<T>> {
+		return this.getTraversalStepsIterable(
+			asyncTreePostOrderDepthFirstSearch,
+			treePostOrderDepthFirstSearch,
+			'append',
+			basePath,
+		);
+	}
+
+	/**
+	 * Reprocess all the key level nodes, registering every key children of them.
+	 * To use this method, randomIterate and registerChild must be implemented on the storage.
+	 * Optionally, clearAllChildrenRegistry can also be implemented, which will make
+	 * all the previously registered children be excluded before performing the operation
+	 * @param partition how many children will be registered per time
+	 */
 	async *reprocessAllKeyLevelChildren(partition = 1) {
 		if (!this.storage.randomIterate || !this.storage.registerChild) {
 			throw new TypeError(
@@ -1096,6 +1127,10 @@ export class TreeKeyCache<
 		return changed;
 	}
 
+	/**
+	 * Performs a prune, removing all empty or expired nodes from tree level nodes.
+	 * @param pattern The pattern of storage keys to be pruned. If not informed, all tree level keys will be pruned.
+	 */
 	async prune(pattern?: string) {
 		await fluentAsync(this.internalRandomIterate(pattern, false, true))
 			.filter()
