@@ -1,3 +1,10 @@
+# [0.16.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.15.0...v0.16.0) (2023-11-04)
+
+
+### Features
+
+* implementing storage value versioning support ([#17](https://github.com/codibre/nodejs-tree-key-cache/issues/17)) ([d06b580](https://github.com/codibre/nodejs-tree-key-cache/commit/d06b580df8c2251fff63e58b9a719e2816f6670b))
+
 # [0.15.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.14.0...v0.15.0) (2023-11-01)
 
 
