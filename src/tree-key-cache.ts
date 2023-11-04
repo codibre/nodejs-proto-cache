@@ -7,6 +7,7 @@ import {
 	KeyTreeCacheOptions,
 	KeyTreeCacheStorage,
 	MultiTree,
+	MultiTreeValue,
 	Step,
 	StepTtl,
 	SyncTree,
@@ -123,53 +124,53 @@ export class TreeKeyCache<
 		return mountStep(result);
 	}
 
+	private async deserializeAsyncList(serialized: AsyncIterable<R | undefined>) {
+		if (!this.options.valueSerializer.deserializeAsyncList) {
+			throw new Error(
+				'deserializeAsyncList is not implemented on valueSerializer',
+			);
+		}
+		try {
+			return await this.options.valueSerializer.deserializeAsyncList(
+				serialized,
+			);
+		} catch (error) {
+			this.emit('deserializeError', error, 'value');
+		}
+	}
+
+	private deserializeList(serialized: MultiTreeValue<R>) {
+		if (!this.options.valueSerializer.deserializeList) {
+			throw new Error('deserializeList is not implemented on valueSerializer');
+		}
+		try {
+			return this.options.valueSerializer.deserializeList(
+				serialized[multiTreeValue],
+			);
+		} catch (error) {
+			this.emit('deserializeError', error, 'value');
+		}
+	}
+
 	private deserializeValue(
 		serialized: BufferedValue<R>,
 	): Promise<T | undefined> | T | undefined {
-		const self = this;
-		const { valueSerializer } = this.options;
-		async function getFromListAsync(iterable: AsyncIterable<R | undefined>) {
-			if (!valueSerializer.deserializeAsyncList) {
-				throw new Error(
-					'deserializeAsyncList is not implemented on valueSerializer',
-				);
-			}
-			try {
-				return await valueSerializer.deserializeAsyncList(iterable);
-			} catch (error) {
-				self.emit('deserializeError', error, 'value');
-			}
-		}
-		function getFromList(iterable: Iterable<R>) {
-			if (!valueSerializer.deserializeList) {
-				throw new Error(
-					'deserializeList is not implemented on valueSerializer',
-				);
-			}
-			try {
-				return valueSerializer.deserializeList(iterable);
-			} catch (error) {
-				self.emit('deserializeError', error, 'value');
-			}
-		}
-		function getFromValue(value: R) {
-			try {
-				return valueSerializer.deserialize(value);
-			} catch (error) {
-				self.emit('deserializeError', error, 'value');
-			}
-		}
 		if (isAsyncIterable(serialized)) {
-			return getFromListAsync(serialized);
+			return this.deserializeAsyncList(serialized);
 		}
+
 		if (
 			serialized &&
 			typeof serialized === 'object' &&
 			multiTreeValue in serialized
 		) {
-			return getFromList(serialized[multiTreeValue]);
+			return this.deserializeList(serialized);
 		}
-		return getFromValue(serialized);
+		try {
+			return this.options.valueSerializer.deserialize(serialized);
+		} catch (error) {
+			this.emit('deserializeError', error, 'value');
+		}
 	}
 
 	private serializeValue(value: T) {
