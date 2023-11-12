@@ -1,7 +1,8 @@
+import { getTreeCurrentSerializedValue } from 'src/internal';
 import { Serializer, Tree, TreeKeys } from '../types';
 import { treePreOrderDepthFirstSearch } from './graphs';
 import { valueSymbol } from './graphs/graph-types';
-import { isUndefined } from './is-undefined';
+import { isUndefined } from '../internal/is-undefined';
 
 export class TreeError extends Error {}
 export class EmptyTree extends Error {
@@ -23,14 +24,12 @@ export function deserializeWholeTree<T, R = string>(
 	treeSerializer: Serializer<Tree<R>, R>,
 	valueSerializer: Serializer<T, R>,
 ) {
+	const now = Date.now();
 	const tree = treeSerializer.deserialize(data);
-	if (
-		isUndefined(tree[TreeKeys.children]) &&
-		isUndefined(tree[TreeKeys.value])
-	) {
+	const rootValue = getTreeCurrentSerializedValue(tree, now);
+	if (isUndefined(tree[TreeKeys.children]) && isUndefined(rootValue)) {
 		throw new EmptyTree();
 	}
-	const rootValue = tree[TreeKeys.value];
 	const newTree: Tree<T> = {
 		[TreeKeys.value]: rootValue
 			? valueSerializer.deserialize(rootValue)

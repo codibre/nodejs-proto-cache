@@ -15,6 +15,16 @@ export function* treePreOrderTraversal<T>(
 	>,
 	startParentRef: ChainedObject | undefined,
 ): Iterable<SyncTraversalItem<T>> {
+	const now = Date.now();
+	if (startParentRef) {
+		yield createTraversalItem<T>(
+			startParentRef.key,
+			startParentRef.level,
+			startParentRef.parentRef,
+			root,
+			now,
+		);
+	}
 	list.push([root, startParentRef?.level ?? 0, undefined, startParentRef]);
 	while (list.length > 0) {
 		const item = list.pop();
@@ -22,7 +32,7 @@ export function* treePreOrderTraversal<T>(
 			throw new TypeError('Something went wrong processing list structure');
 		}
 		const [treeRef, level, key, parentRef] = item;
-		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
+		const { [TreeKeys.children]: children } = treeRef;
 		let node: ChainedObject | undefined;
 		if (key === undefined) {
 			node = parentRef;
@@ -32,7 +42,7 @@ export function* treePreOrderTraversal<T>(
 				level,
 				parentRef,
 				treeRef,
-				value,
+				now,
 			));
 		}
 		if (children) {
