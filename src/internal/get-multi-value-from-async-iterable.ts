@@ -6,7 +6,7 @@ import { MultiTreeValue, multiTreeValue } from '../types';
  * @param value the async iterable to be converted
  * @returns The resultant MultiTreeValue
  */
-export async function getMultiValueFromAsyncIterable<R>(
+export async function getMultiTreeValueFromAsyncIterable<R>(
 	value: AsyncIterable<R | undefined>,
 ): Promise<MultiTreeValue<R>> {
 	return {

@@ -43,7 +43,7 @@ import {
 	pruneTree,
 	getNextStorageNode,
 	getTtl,
-	isUndefined,
+	isUndefinedOrNull,
 	getKey,
 } from './internal';
 import {
@@ -164,7 +164,7 @@ export class TreeKeyCache<
 			if (tree) {
 				while (nodeRef && nodeRef.level < length && tree) {
 					const v = getTreeCurrentSerializedValue(tree, now);
-					if (!isUndefined(v)) {
+					if (!isUndefinedOrNull(v)) {
 						yield (await this.internal.getStep(v, nodeRef)) as IterateStep<T>;
 					}
 					({ nodeRef, tree } = getNextTreeNode(
@@ -178,7 +178,7 @@ export class TreeKeyCache<
 				}
 				if (tree) {
 					const value = getTreeCurrentSerializedValue(tree, now);
-					if (!isUndefined(value) && nodeRef) {
+					if (!isUndefinedOrNull(value) && nodeRef) {
 						nodeRef = createTraversalItem(
 							nodeRef.key,
 							nodeRef.level,
@@ -219,7 +219,7 @@ export class TreeKeyCache<
 		value: T | (() => Promise<T>),
 		ttl?: StepTtl<T>,
 	): Promise<void> {
-		if (isUndefined(value)) {
+		if (isUndefinedOrNull(value)) {
 			return;
 		}
 		const { length } = path;

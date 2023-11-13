@@ -48,7 +48,7 @@ import {
 import { getNextTreeNode } from './get-next-tree-node';
 import { getTreeCurrentSerializedValue } from './get-tree-current-serialized-value';
 import { getTtl } from './get-ttl';
-import { isUndefined } from './is-undefined';
+import { isUndefinedOrNull } from './is-undefined';
 import { getReadStorageFunction } from './get-read-storage-function';
 
 /**
@@ -76,7 +76,7 @@ export class TreeInternalControl<T, R> {
 		function mountStep(value: T | undefined): Step<T> {
 			return { key: nodeRef.key, value, level: nodeRef.level, nodeRef };
 		}
-		if (isUndefined(serializedValue)) {
+		if (isUndefinedOrNull(serializedValue)) {
 			return mountStep(createValue?.(nodeRef));
 		}
 		const result = this.deserializeValue(serializedValue);
@@ -417,7 +417,7 @@ export class TreeInternalControl<T, R> {
 		chainedKey: string,
 		ttl: StepTtl<T> | undefined,
 	) {
-		if (!isUndefined(step.value)) {
+		if (!isUndefinedOrNull(step.value)) {
 			const serialized = this.options.valueSerializer.serialize(step.value);
 			if (currentSerialized !== serialized) {
 				const { currentTtl } = getTtl(ttl, step, undefined);
@@ -535,10 +535,10 @@ export class TreeInternalControl<T, R> {
 				}
 				currentTree[TreeKeys.children] ??= {};
 				let next: Tree<R> | undefined = currentTree[TreeKeys.children][key];
-				if (isUndefined(next)) {
+				if (isUndefinedOrNull(next)) {
 					next = currentTree[TreeKeys.children][key] = {};
 					const value = createValue?.(depthNode);
-					if (!isUndefined(value)) {
+					if (!isUndefinedOrNull(value)) {
 						changed = true;
 						next[TreeKeys.value] =
 							this.options.valueSerializer.serialize(value);
@@ -584,7 +584,7 @@ export class TreeInternalControl<T, R> {
 		maxTtl: number | undefined,
 	) {
 		let changed = false;
-		if (!isUndefined(step.value)) {
+		if (!isUndefinedOrNull(step.value)) {
 			const serialized = this.serializeValue(step.value);
 			if (currentSerialized !== serialized) {
 				changed = true;

@@ -8,8 +8,8 @@ import {
 	TreeKeys,
 } from '../types';
 import { createTraversalItem } from '../utils/graphs';
-import { getMultiValueFromTrees } from './get-multi-value-from-trees';
-import { isUndefined } from './is-undefined';
+import { getMultiTreeValueFromTrees } from './get-multi-value-from-trees';
+import { isUndefinedOrNull } from './is-undefined';
 
 /**
  * Tree reference representing a sync tree with history control, ie,
@@ -23,7 +23,7 @@ export class MultiTreeRef<R> implements MultiTree<R> {
 		private trees: Tree<R>[],
 		private now: number,
 	) {
-		this[TreeKeys.value] = getMultiValueFromTrees(trees, now);
+		this[TreeKeys.value] = getMultiTreeValueFromTrees(trees, now);
 	}
 
 	get [TreeKeys.children](): MultiTreeChildren<R> | undefined {
@@ -54,7 +54,7 @@ export class MultiTreeRef<R> implements MultiTree<R> {
 	}
 
 	set [TreeKeys.children](tree: MultiTreeChildren<R> | undefined) {
-		if (!isUndefined(tree)) {
+		if (!isUndefinedOrNull(tree)) {
 			throw new Error('MultiTreeRef only allow setting children to undefined');
 		}
 		this.#emptyChildren = true;

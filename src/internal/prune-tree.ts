@@ -1,7 +1,7 @@
 import { ChainedObject, Tree, TreeKeys } from '../types';
 import { treePostOrderDepthFirstSearch } from '../utils/graphs';
 import { treeRefSymbol, valueSymbol } from '../utils/graphs/graph-types';
-import { isUndefined } from './is-undefined';
+import { isUndefinedOrNull } from './is-undefined';
 
 /**
  * This method prunes a given Tree, returning true when it has
@@ -41,7 +41,7 @@ export function pruneTree<R = string>(
 				}
 			}
 		}
-		let undefinedValue = isUndefined(item[valueSymbol]);
+		let undefinedValue = isUndefinedOrNull(item[valueSymbol]);
 		if (undefinedValue) {
 			item[valueSymbol] = tree[TreeKeys.value] = undefined;
 			tree[TreeKeys.deadline] = undefined;

@@ -12,8 +12,8 @@ import { buildKey } from '../utils/build-key';
 import { AnyTraversalItem, valueSymbol } from '../utils/graphs/graph-types';
 import { MultiTreeRef } from './multi-tree-ref';
 import { getReadStorageFunction } from './get-read-storage-function';
-import { getMultiValueFromAsyncIterable } from './get-multi-value-from-async-iterable';
-import { isUndefined } from './is-undefined';
+import { getMultiTreeValueFromAsyncIterable } from './get-multi-value-from-async-iterable';
+import { isUndefinedOrNull } from './is-undefined';
 import { TreeInternalControl } from './tree-internal-control';
 
 /**
@@ -61,7 +61,7 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 				const value = await get(buildKey(traversalItem));
 				if (level < this.options.keyLevelNodes) {
 					traversalItem[valueSymbol] = isAsyncIterable(value)
-						? await getMultiValueFromAsyncIterable(value)
+						? await getMultiTreeValueFromAsyncIterable(value)
 						: value;
 					yield [
 						item,
@@ -73,7 +73,7 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 							this.internal,
 						),
 					];
-				} else if (!isUndefined(value)) {
+				} else if (!isUndefinedOrNull(value)) {
 					if (level > this.options.keyLevelNodes) {
 						throw new Error('Something went wrong');
 					}

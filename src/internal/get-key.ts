@@ -1,4 +1,4 @@
-import { isUndefined } from './is-undefined';
+import { isUndefinedOrNull } from './is-undefined';
 
 /**
  * Returns the value of the current level key or throws
@@ -8,7 +8,7 @@ import { isUndefined } from './is-undefined';
  */
 export function getKey(keys: string[], level: number) {
 	const key = keys[level];
-	if (isUndefined(key)) {
+	if (isUndefinedOrNull(key)) {
 		throw new TypeError(`Undefined key at position ${level}`);
 	}
 	return key;

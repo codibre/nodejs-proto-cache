@@ -7,7 +7,7 @@ import { getTreeCurrentSerializedValue } from './get-tree-current-serialized-val
  * @param trees The list of trees to be converted
  * @returns The MultiTreeValue containing the non expired rootLevel values
  */
-export function getMultiValueFromTrees<R>(trees: Tree<R>[], now: number) {
+export function getMultiTreeValueFromTrees<R>(trees: Tree<R>[], now: number) {
 	return {
 		[multiTreeValue]: fluent(trees)
 			.map((tree) => getTreeCurrentSerializedValue(tree, now))

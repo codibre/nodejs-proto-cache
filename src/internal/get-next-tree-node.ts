@@ -23,13 +23,11 @@ export function getNextTreeNode<R>(
 	now: number,
 ) {
 	const key = getKey(path, level);
-	level++;
 	const nextTree = tree[TreeKeys.children]?.[key];
-	if (!nextTree) {
-		return { nodeRef: undefined, tree: undefined };
-	}
-	return {
-		nodeRef: createTraversalItem(key, level, parentRef, treeRef, now),
-		tree: nextTree,
-	};
+	return nextTree
+		? {
+				nodeRef: createTraversalItem(key, level + 1, parentRef, treeRef, now),
+				tree: nextTree,
+		  }
+		: { nodeRef: undefined, tree: undefined };
 }

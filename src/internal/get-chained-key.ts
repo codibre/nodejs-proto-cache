@@ -2,6 +2,7 @@ import { getKey } from './get-key';
 
 /**
  * Returns the concatenation the current key with the previous ones, building a deeper key at each call
+ * It may throw an exception when level or key are invalid
  * @param keys the list with all keys
  * @param level the current level
  * @param chainedKey The previous chainedKey
