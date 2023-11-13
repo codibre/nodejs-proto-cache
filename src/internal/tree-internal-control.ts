@@ -50,6 +50,7 @@ import { getTreeCurrentSerializedValue } from './get-tree-current-serialized-val
 import { getTtl } from './get-ttl';
 import { isUndefined } from './is-undefined';
 import { getReadStorageFunction } from './get-read-storage-function';
+import { getMemoized } from './get-memoized';
 
 /**
  * An auxiliary class containing internal methods to be used
@@ -250,7 +251,6 @@ export class TreeInternalControl<T, R> {
 		let chainedKey: string | undefined;
 		const treeRef: Tree<R> = {};
 		const now = Date.now();
-		const get = getReadStorageFunction(this.storage);
 
 		if (upTo > 0 && (!nodeRef || upTo > nodeRef.level)) {
 			do {
@@ -266,26 +266,21 @@ export class TreeInternalControl<T, R> {
 
 		if (nodeRef && length >= nodeRef.level) {
 			chainedKey = buildKey(nodeRef);
-			const buffer = await (lastValue
-				? this.storage.get(chainedKey)
-				: get(chainedKey));
 			if (nodeRef.level < keyLevelNodes) {
+				const buffer = await (lastValue
+					? this.storage.get(chainedKey)
+					: this.readStorage(chainedKey));
 				nodeRef[valueSymbol] = isAsyncIterable(buffer)
 					? { [multiTreeValue]: await fluentAsync(buffer).filter().toArray() }
 					: buffer;
-			} else if (buffer) {
+			} else {
 				let tree: SyncTree<R> | undefined;
-				if (isAsyncIterable(buffer)) {
-					tree = new MultiTreeRef(
-						nodeRef,
-						await fluentAsync(buffer)
-							.filter()
-							.map((buff) => this.options.treeSerializer.deserialize(buff))
-							.toArray(),
-						now,
-					);
-				} else {
+				if (lastValue) {
+					const buffer = await this.storage.get(chainedKey);
+					if (!buffer) return undefined;
 					tree = this.options.treeSerializer.deserialize(buffer);
+				} else {
+					tree = await this.getMemoizedTree(chainedKey, nodeRef, now);
 				}
 				while (nodeRef && nodeRef.level < length && tree) {
 					({ nodeRef, tree } = getNextTreeNode(
@@ -613,4 +608,49 @@ export class TreeInternalControl<T, R> {
 			.filter()
 			.toArray();
 	}
+
+	/**
+	 * Returns the expected value. This can return an
+	 * asyncIterable when history is enabled, a serialized value
+	 * when it is not, or undefined, when no key is retrieved
+	 * @param key The chainedKey to access the key value
+	 */
+	readStorage = getReadStorageFunction(this.storage);
+
+	/**
+	 * Returns a memoized value. This method will just
+	 * return the value normally when there is no memoizer
+	 * @param key The chainedKey to access the key value
+	 * @param nodeRef The node reference
+	 */
+	getMemoizedStep = getMemoized(
+		this.options.memoizer,
+		async (key: string, nodeRef: TraversalItem<unknown>) => {
+			const buffer = await this.readStorage(key);
+			return buffer ? this.getStep(buffer, nodeRef) : undefined;
+		},
+	);
+
+	/**
+	 * Returns a memoized tree. This method will just
+	 * return the tree normally when there is no memoizer
+	 * @param key The chainedKey to access the key tree
+	 * @param nodeRef The node reference
+	 * @param now The current timestamp considered
+	 */
+	getMemoizedTree = getMemoized(
+		this.options.memoizer,
+		async (key: string, nodeRef: TraversalItem<unknown>, now: number) => {
+			const buffer = await this.readStorage(key);
+			if (buffer) {
+				return isAsyncIterable(buffer)
+					? this.deserializeTreeFromList(
+							buffer,
+							nodeRef as MultiTraversalItem<R>,
+							now,
+					  )
+					: this.deserializeTree(buffer);
+			}
+		},
+	);
 }

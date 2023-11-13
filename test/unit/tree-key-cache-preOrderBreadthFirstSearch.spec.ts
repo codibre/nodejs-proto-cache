@@ -1,6 +1,7 @@
 import { fluent, fluentAsync } from '@codibre/fluent-iterable';
 import { TreeKeyCache, TreeKeys, buildKey } from '../../src';
 import { initializeTest, toArray } from '../helpers';
+import { TreeInternalControl } from 'src/internal';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -184,6 +185,11 @@ describe(TreeKeyCache.name, () => {
 			map.set('a1', JSON.stringify('a'));
 			map.set('a1:b1:c1', JSON.stringify('b'));
 			map.set('a:b:c2', JSON.stringify('v2'));
+			target['internal'] = new TreeInternalControl(
+				target['options'],
+				target,
+				target['storage'],
+			);
 
 			const result = await toArray(
 				target.preOrderBreadthFirstSearch(['a', 'b']),

@@ -7,7 +7,6 @@ import {
 	KeyTreeCacheStorage,
 	Step,
 	StepTtl,
-	SyncTree,
 	Tree,
 	TreeKeys,
 	TreeSerializer,
@@ -21,7 +20,6 @@ import {
 } from './utils/graphs';
 import { buildKey, splitKey } from './utils/build-key';
 import {
-	MultiTraversalItem,
 	TraversalItem,
 	treeRefSymbol,
 	valueSymbol,
@@ -46,12 +44,7 @@ import {
 	isUndefined,
 	getKey,
 } from './internal';
-import {
-	constant,
-	fluentAsync,
-	isAsyncIterable,
-} from '@codibre/fluent-iterable';
-import { getReadStorageFunction } from './internal';
+import { constant, fluentAsync } from '@codibre/fluent-iterable';
 import { dontWait } from './utils';
 
 const defaultSerializer = {
@@ -116,7 +109,6 @@ export class TreeKeyCache<
 		let nodeRef: TraversalItem<R> | undefined;
 		const treeRef: Tree<R> = {};
 		const now = Date.now();
-		const get = getReadStorageFunction(this.storage);
 
 		if (upTo > 0) {
 			do {
@@ -128,15 +120,8 @@ export class TreeKeyCache<
 					now,
 				);
 				const chainedKey = buildKey(nodeRef);
-				let step: Step<T> | undefined = this.options.memoizer?.get(chainedKey);
-				if (!step) {
-					const buffer = await get(chainedKey);
-					if (!buffer) {
-						continue;
-					}
-					step = await this.internal.getStep(buffer, nodeRef);
-					this.options.memoizer?.set(chainedKey, step);
-				}
+				const step = await this.internal.getMemoizedStep(chainedKey, nodeRef);
+				if (isUndefined(step)) continue;
 				yield step as IterateStep<T>;
 			} while (nodeRef.level < upTo);
 		}
@@ -144,23 +129,7 @@ export class TreeKeyCache<
 		if (nodeRef && length > nodeRef.level) {
 			nodeRef = getNextStorageNode(path, nodeRef.level, nodeRef, treeRef, now);
 			const chainedKey = buildKey(nodeRef);
-			let tree: SyncTree<R> | undefined =
-				this.options.memoizer?.get(chainedKey);
-			if (!tree) {
-				const buffer = await get(chainedKey);
-				if (buffer) {
-					tree = isAsyncIterable(buffer)
-						? await this.internal.deserializeTreeFromList(
-								buffer,
-								nodeRef as MultiTraversalItem<R>,
-								now,
-						  )
-						: this.internal.deserializeTree(buffer);
-					if (tree) {
-						this.options.memoizer?.set(chainedKey, tree);
-					}
-				}
-			}
+			let tree = await this.internal.getMemoizedTree(chainedKey, nodeRef, now);
 			if (tree) {
 				while (nodeRef && nodeRef.level < length && tree) {
 					const v = getTreeCurrentSerializedValue(tree, now);

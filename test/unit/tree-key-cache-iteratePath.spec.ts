@@ -1,6 +1,7 @@
 import { fluent, fluentAsync } from '@codibre/fluent-iterable';
 import { Step, Tree, TreeKeyCache, TreeKeys } from '../../src';
 import { initializeTest } from 'test/helpers';
+import { TreeInternalControl, getReadStorageFunction } from 'src/internal';
 
 const proto = TreeKeyCache.prototype;
 describe(TreeKeyCache.name, () => {
@@ -267,6 +268,11 @@ describe(TreeKeyCache.name, () => {
 
 		it('should memoize each redis parsed read, and use it in subsequent reads, when a memoizer is set', async () => {
 			const memoizer = (target['options'].memoizer = new Map());
+			target['internal'] = new TreeInternalControl(
+				target['options'],
+				target,
+				target['storage'],
+			);
 			jest.spyOn(memoizer, 'get');
 			jest.spyOn(memoizer, 'set');
 
@@ -337,6 +343,9 @@ describe(TreeKeyCache.name, () => {
 			target['storage'].getHistory = jest
 				.fn()
 				.mockReturnValue(fluentAsync([]) as any);
+			target['internal'].readStorage = getReadStorageFunction(
+				target['storage'],
+			);
 			const { valueSerializer } = target['options'];
 			valueSerializer.deserializeList = (list) =>
 				fluent(list)
@@ -364,6 +373,9 @@ describe(TreeKeyCache.name, () => {
 			target['storage'].getHistory = jest.fn().mockImplementation((k): any => {
 				return fluentAsync([get(k)]);
 			});
+			target['internal'].readStorage = getReadStorageFunction(
+				target['storage'],
+			);
 			const { valueSerializer } = target['options'];
 			valueSerializer.deserializeList = (list) =>
 				fluent(list)
