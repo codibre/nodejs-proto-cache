@@ -12,10 +12,5 @@ export function asyncTreePostOrderDepthFirstSearch<T>(
 	tree: AsyncTree<T>,
 	parentRef: ChainedObject | undefined,
 ) {
-	return asyncTreePostOrderTraversal(
-		tree,
-		new AsyncStack(),
-		parentRef,
-		undefined,
-	);
+	return asyncTreePostOrderTraversal(tree, new AsyncStack(), parentRef);
 }

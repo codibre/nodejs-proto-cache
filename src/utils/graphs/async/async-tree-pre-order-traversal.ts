@@ -38,13 +38,23 @@ export async function* asyncTreePreOrderTraversal<T>(
 	list: AsyncSimpleList<
 		[AnyTree<T>, number, string | undefined, ChainedObject | undefined]
 	>,
-	initialParentRef: ChainedObject | undefined,
+	startParentRef: ChainedObject | undefined,
 ): AsyncIterable<AnyTraversalItem<T>> {
+	const now = Date.now();
+	if (startParentRef) {
+		yield createTraversalItem<T>(
+			startParentRef.key,
+			startParentRef.level,
+			startParentRef.parentRef,
+			root,
+			now,
+		);
+	}
 	await list.push([
 		root,
-		initialParentRef?.level ?? 0,
+		startParentRef?.level ?? 0,
 		undefined,
-		initialParentRef,
+		startParentRef,
 	]);
 	while (list.length > 0) {
 		const item = await list.pop();
@@ -52,7 +62,7 @@ export async function* asyncTreePreOrderTraversal<T>(
 			break;
 		}
 		const [treeRef, level, key, parentRef] = item;
-		const { [TreeKeys.children]: children, [TreeKeys.value]: value } = treeRef;
+		const { [TreeKeys.children]: children } = treeRef;
 		let node: ChainedObject | AnyTraversalItem<T> | undefined;
 		if (key === undefined) {
 			node = parentRef;
@@ -62,7 +72,7 @@ export async function* asyncTreePreOrderTraversal<T>(
 				level,
 				parentRef,
 				treeRef,
-				value,
+				now,
 			));
 		}
 		const childrenResult =

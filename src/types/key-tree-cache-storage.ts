@@ -1,3 +1,7 @@
+/**
+ * Represents the storage used by tree key cache to
+ * persist the tree
+ */
 export interface KeyTreeCacheStorage<R = string> {
 	/**
 	 * Clear all the current key children registered

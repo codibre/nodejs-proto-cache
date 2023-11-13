@@ -6,24 +6,29 @@ import {
 	KeyTreeCacheStorage,
 	TreeKeys,
 	TreeValue,
-} from './types';
-import { createTraversalItem } from './utils/graphs';
-import { buildKey } from './utils/graphs/build-key';
-import { AnyTraversalItem, valueSymbol } from './utils/graphs/graph-types';
+} from '../types';
+import { createTraversalItem } from '../utils/graphs';
+import { buildKey } from '../utils/build-key';
+import { AnyTraversalItem, valueSymbol } from '../utils/graphs/graph-types';
 import { MultiTreeRef } from './multi-tree-ref';
-import {
-	getMultiValueFromAsyncIterable,
-	getReadStorageFunction,
-	getTreeListFromAsyncIterable,
-	isUndefined,
-} from './utils';
+import { getReadStorageFunction } from './get-read-storage-function';
+import { getMultiTreeValueFromAsyncIterable } from './get-multi-value-from-async-iterable';
+import { isUndefinedOrNull } from './is-undefined';
+import { TreeInternalControl } from './tree-internal-control';
 
+/**
+ * Tree reference representing a tree saved on
+ * many different keys of redis, as so, needed to be
+ * retrieved asynchronously
+ */
 export class AsyncTreeRef<R> implements AsyncTree<R> {
 	[TreeKeys.value]?: TreeValue<R>;
 	constructor(
 		private nodeRef: AnyTraversalItem<R> | undefined,
 		private storage: KeyTreeCacheStorage<R>,
 		private options: MergedOptions<unknown, R>,
+		private now: number,
+		private internal: TreeInternalControl<unknown, R>,
 	) {
 		this[TreeKeys.value] = nodeRef?.[valueSymbol];
 	}
@@ -51,17 +56,24 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 					level,
 					this.nodeRef,
 					this,
+					this.now,
 				);
 				const value = await get(buildKey(traversalItem));
 				if (level < this.options.keyLevelNodes) {
 					traversalItem[valueSymbol] = isAsyncIterable(value)
-						? await getMultiValueFromAsyncIterable(value)
+						? await getMultiTreeValueFromAsyncIterable(value)
 						: value;
 					yield [
 						item,
-						new AsyncTreeRef(traversalItem, this.storage, this.options),
+						new AsyncTreeRef(
+							traversalItem,
+							this.storage,
+							this.options,
+							this.now,
+							this.internal,
+						),
 					];
-				} else if (!isUndefined(value)) {
+				} else if (!isUndefinedOrNull(value)) {
 					if (level > this.options.keyLevelNodes) {
 						throw new Error('Something went wrong');
 					}
@@ -69,10 +81,8 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 						? this.options.treeSerializer.deserialize(value)
 						: new MultiTreeRef<R>(
 								traversalItem,
-								await getTreeListFromAsyncIterable(
-									this.options.treeSerializer,
-									value,
-								),
+								await this.internal.getTreeListFromAsyncIterable(value),
+								this.now,
 						  );
 					yield [item, tree];
 				}
