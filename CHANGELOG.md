@@ -1,3 +1,10 @@
+## [0.16.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.0...v0.16.1) (2023-11-13)
+
+
+### Bug Fixes
+
+* refactoring code for better maintainability ([#18](https://github.com/codibre/nodejs-tree-key-cache/issues/18)) ([db64a73](https://github.com/codibre/nodejs-tree-key-cache/commit/db64a73083159ff5482411c6c3064d6fe396f09d))
+
 # [0.16.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.15.0...v0.16.0) (2023-11-04)
 
 
