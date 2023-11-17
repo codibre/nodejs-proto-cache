@@ -1,3 +1,10 @@
+## [0.16.2](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.1...v0.16.2) (2023-11-17)
+
+
+### Bug Fixes
+
+* refactoring memoizer for better maintainability and proper concurrent reusing ([#19](https://github.com/codibre/nodejs-tree-key-cache/issues/19)) ([c83f1ee](https://github.com/codibre/nodejs-tree-key-cache/commit/c83f1ee3729c729df1f3cb5546f49d880d2bf12b))
+
 ## [0.16.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.0...v0.16.1) (2023-11-13)
 
 
