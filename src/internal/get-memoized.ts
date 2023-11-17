@@ -1,17 +1,15 @@
 import { Memoizer } from 'src/types';
 import { isUndefinedOrNull } from './is-undefined';
 
-async function runAndMemoize<Args extends unknown[], T>(
+function runAndMemoize<Args extends unknown[], T>(
 	memoizer: Memoizer,
 	key: string,
 	args: Args,
 	callback: (key: string, ...args: Args) => Promise<T>,
 ) {
-	const result = await callback(key, ...args);
-	if (!isUndefinedOrNull(result)) {
-		memoizer.set(key, result);
-	}
-	return result;
+	const promise = callback(key, ...args);
+	memoizer.set(key, promise);
+	return promise;
 }
 
 /**
