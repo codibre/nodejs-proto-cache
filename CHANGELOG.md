@@ -1,3 +1,10 @@
+# [0.17.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.2...v0.17.0) (2023-11-24)
+
+
+### Features
+
+* creatnig memory tree deep-tree-set ([#20](https://github.com/codibre/nodejs-tree-key-cache/issues/20)) ([df6696b](https://github.com/codibre/nodejs-tree-key-cache/commit/df6696b70692889bce15e952dedb0b9e724cd754))
+
 ## [0.16.2](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.1...v0.16.2) (2023-11-17)
 
 
