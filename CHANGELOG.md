@@ -1,3 +1,10 @@
+## [0.17.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.0...v0.17.1) (2023-11-24)
+
+
+### Bug Fixes
+
+* fixing type importing on deepTreeSetFunction ([4d50c73](https://github.com/codibre/nodejs-tree-key-cache/commit/4d50c732fe13780f60f49136705867ff4471f0fc))
+
 # [0.17.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.16.2...v0.17.0) (2023-11-24)
 
 
