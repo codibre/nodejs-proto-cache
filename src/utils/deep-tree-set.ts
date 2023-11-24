@@ -1,4 +1,4 @@
-import { ChainedObject, Step, Tree, TreeKeys } from 'src/types';
+import { ChainedObject, Step, Tree, TreeKeys } from '../types';
 
 class StepRef<T> implements Step<T> {
 	constructor(
