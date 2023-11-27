@@ -1,3 +1,10 @@
+## [0.17.2](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.1...v0.17.2) (2023-11-27)
+
+
+### Bug Fixes
+
+* ignoreing undefined option properties ([cedd833](https://github.com/codibre/nodejs-tree-key-cache/commit/cedd833fcb782481fad1adee1580b57557974469))
+
 ## [0.17.1](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.0...v0.17.1) (2023-11-24)
 
 
