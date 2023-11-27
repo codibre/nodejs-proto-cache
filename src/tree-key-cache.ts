@@ -43,7 +43,7 @@ import {
 	isUndefinedOrNull,
 	getKey,
 } from './internal';
-import { constant, fluentAsync } from '@codibre/fluent-iterable';
+import { constant, fluentAsync, fluentObject } from '@codibre/fluent-iterable';
 import { dontWait } from './utils';
 
 const defaultSerializer = {
@@ -92,7 +92,9 @@ export class TreeKeyCache<
 		super();
 		this.options = {
 			...(defaultOptions as MergedOptions<T, R>),
-			...options,
+			...(fluentObject(options)
+				.filter(([, v]) => !isUndefinedOrNull(v))
+				.toObject(0, 1) as KeyTreeCacheOptions<T, R>),
 		};
 		this.internal = new TreeInternalControl(this.options, this, this.storage);
 	}
