@@ -49,6 +49,22 @@ describe(TreeKeyCache.name, () => {
 															},
 														},
 													},
+													e2: {
+														v: { value: 50 },
+														[TreeKeys.children]: {
+															f: {
+																v: { value: 61 },
+															},
+														},
+													},
+													e3: {
+														v: { value: 50 },
+														[TreeKeys.children]: {
+															f: {
+																v: { value: 61 },
+															},
+														},
+													},
 												},
 											},
 										},
@@ -83,6 +99,18 @@ describe(TreeKeyCache.name, () => {
 							[TreeKeys.value]: '{"value":40}',
 							[TreeKeys.children]: {
 								e: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":61}' },
+									},
+								},
+								e3: {
+									v: '{"value":50}',
+									[TreeKeys.children]: {
+										f: { v: '{"value":61}' },
+									},
+								},
+								e2: {
 									v: '{"value":50}',
 									[TreeKeys.children]: {
 										f: { v: '{"value":61}' },

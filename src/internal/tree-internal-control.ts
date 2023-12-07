@@ -495,35 +495,32 @@ export class TreeInternalControl<T, R> {
 
 	/**
 	 * Executes the iteration to save a tree level key value
-	 * @param breadthNode the current node reference
+	 * @param rootNode the current node reference
 	 * @param chainedKey The chainedKey for the node reference
 	 * @param createValue Callback to initialize a value, optional
 	 * @param ttl The ttl or function that returns the ttl to be used
 	 */
 	async *saveFullTreeValue(
-		breadthNode: TraversalItem<T>,
+		rootNode: TraversalItem<T>,
 		chainedKey: string,
 		createValue: ((node: ChainedObject) => T | undefined) | undefined,
 		ttl: StepTtl<T> | undefined,
 	): AsyncIterable<FullSetItem<R, T>> {
 		const now = Date.now();
-		const { [treeRefSymbol]: treeRef } = breadthNode;
+		const { [treeRefSymbol]: treeRef } = rootNode;
 		const serializedTree = await this.storage.get(chainedKey);
 		const rootTree: Tree<R> = serializedTree
 			? this.options.treeSerializer.deserialize(serializedTree)
 			: {};
 		let currentTree: Tree<R> | undefined = rootTree;
 		const stack: Tree<R>[] = [];
+		stack[rootNode.level] = rootTree;
 		let changed = false;
 		let maxTtl: number | undefined;
-		const baseLevel = breadthNode.level;
-		for (const depthNode of treePreOrderDepthFirstSearch(
-			treeRef,
-			breadthNode,
-		)) {
+		for (const depthNode of treePreOrderDepthFirstSearch(treeRef, rootNode)) {
 			const { level, key } = depthNode;
-			const stackRef = level - baseLevel;
-			if (stack.length < stackRef) {
+			if (level !== rootNode.level) {
+				currentTree = stack[level - 1];
 				if (!currentTree) {
 					throw new Error('Algorithm error');
 				}
@@ -539,14 +536,10 @@ export class TreeInternalControl<T, R> {
 					}
 				}
 				currentTree = next;
-				stack.push(currentTree);
-			} else {
-				while (stack.length > stackRef) {
-					currentTree = stack.pop();
+				stack[level] = currentTree;
+				if (!currentTree) {
+					throw new Error('Persisting error');
 				}
-			}
-			if (!currentTree) {
-				throw new Error('Persisting error');
 			}
 			const item = await this.getFullSetItem(currentTree, depthNode, now);
 			yield item;
