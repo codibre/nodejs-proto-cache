@@ -1,3 +1,10 @@
+## [0.17.3](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.2...v0.17.3) (2023-12-07)
+
+
+### Bug Fixes
+
+* fixing full tree set saving ([#21](https://github.com/codibre/nodejs-tree-key-cache/issues/21)) ([c4be183](https://github.com/codibre/nodejs-tree-key-cache/commit/c4be1832543a66b82caaf49ce2cd3a4a155f41bd))
+
 ## [0.17.2](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.1...v0.17.2) (2023-11-27)
 
 
