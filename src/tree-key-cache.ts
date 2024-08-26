@@ -32,7 +32,6 @@ import {
 	asyncTreePreOrderDepthFirstSearch,
 } from './utils/graphs/async';
 import {
-	DefaultOptions,
 	MergedOptions,
 	getNextTreeNode,
 	TreeInternalControl,
@@ -42,23 +41,10 @@ import {
 	getTtl,
 	isUndefinedOrNull,
 	getKey,
+	defaultOptions,
 } from './internal';
 import { constant, fluentAsync, fluentObject } from '@codibre/fluent-iterable';
 import { dontWait } from './utils';
-
-const defaultSerializer = {
-	deserialize: JSON.parse.bind(JSON),
-	serialize: JSON.stringify.bind(JSON),
-};
-
-const defaultOptions: DefaultOptions<unknown, unknown> = {
-	valueSerializer: defaultSerializer,
-	treeSerializer: defaultSerializer,
-	semaphore: {
-		acquire: async () => async () => undefined,
-	},
-};
-
 type Events = {
 	deserializeError(error: unknown, type: 'value' | 'tree'): void;
 };

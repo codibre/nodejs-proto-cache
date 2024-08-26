@@ -97,4 +97,11 @@ export interface KeyTreeCacheOptions<T, R = string> {
 	 * twice in the same memoizer context
 	 */
 	memoizer?: Memoizer;
+	/**
+	 * Select values from a multi tree to compose a new node.
+	 * Default is to get all values available
+	 * @param value the async iterable of values to be validated
+	 */
+
+	multiTreeSelector?: (value: AsyncIterable<R | undefined>) => Promise<R[]>;
 }
