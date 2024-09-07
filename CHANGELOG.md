@@ -1,3 +1,10 @@
+# [0.18.0](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.3...v0.18.0) (2024-09-07)
+
+
+### Features
+
+* create multi tree select ([#22](https://github.com/codibre/nodejs-tree-key-cache/issues/22)) ([16029b9](https://github.com/codibre/nodejs-tree-key-cache/commit/16029b97fec97246be100ee8bb4b645aa12497fd))
+
 ## [0.17.3](https://github.com/codibre/nodejs-tree-key-cache/compare/v0.17.2...v0.17.3) (2023-12-07)
 
 
