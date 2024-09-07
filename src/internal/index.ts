@@ -1,4 +1,5 @@
 export * from './async-tree-ref';
+export * from './default-options';
 export * from './get-chained-key';
 export * from './get-key';
 export * from './get-multi-value-from-async-iterable';
@@ -8,9 +9,9 @@ export * from './get-next-tree-node';
 export * from './get-read-storage-function';
 export * from './get-tree-current-serialized-value';
 export * from './get-ttl';
-export * from './types';
 export * from './is-undefined';
 export * from './multi-tree-ref';
 export * from './options-types';
 export * from './prune-tree';
 export * from './tree-internal-control';
+export * from './types';

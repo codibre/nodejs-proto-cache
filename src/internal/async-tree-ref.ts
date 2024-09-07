@@ -61,7 +61,10 @@ export class AsyncTreeRef<R> implements AsyncTree<R> {
 				const value = await get(buildKey(traversalItem));
 				if (level < this.options.keyLevelNodes) {
 					traversalItem[valueSymbol] = isAsyncIterable(value)
-						? await getMultiTreeValueFromAsyncIterable(value)
+						? await getMultiTreeValueFromAsyncIterable(
+								value,
+								this.options.multiTreeSelector,
+						  )
 						: value;
 					yield [
 						item,

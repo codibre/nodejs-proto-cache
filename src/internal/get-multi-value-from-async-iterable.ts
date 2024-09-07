@@ -1,4 +1,3 @@
-import { fluentAsync } from '@codibre/fluent-iterable';
 import { MultiTreeValue, multiTreeValue } from '../types';
 
 /**
@@ -8,8 +7,9 @@ import { MultiTreeValue, multiTreeValue } from '../types';
  */
 export async function getMultiTreeValueFromAsyncIterable<R>(
 	value: AsyncIterable<R | undefined>,
+	getMultiValue: (value: AsyncIterable<R | undefined>) => Promise<R[]>,
 ): Promise<MultiTreeValue<R>> {
 	return {
-		[multiTreeValue]: await fluentAsync(value).filter().toArray(),
+		[multiTreeValue]: await getMultiValue(value),
 	};
 }
